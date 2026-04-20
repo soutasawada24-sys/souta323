@@ -2,23 +2,34 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>HTML5 ブロックブラスト</title>
+    <title>HTML5 ブロックブラスト（サイズ修正版）</title>
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background: #1a1a1a; color: white; font-family: 'Arial', sans-serif; touch-action: none; }
-        #score-board { font-size: 24px; margin: 20px; color: #ffcc00; }
+        body { display: flex; flex-direction: column; align-items: center; background: #1a1a1a; color: white; font-family: 'Arial', sans-serif; touch-action: none; margin: 0; padding: 20px; }
+        #score-board { font-size: 32px; margin-bottom: 10px; color: #ffcc00; font-weight: bold; }
+        
+        /* 盤面とピースの1マスを同じ40pxに固定 */
         #game-board { 
             display: grid; grid-template-columns: repeat(8, 40px); grid-template-rows: repeat(8, 40px); 
             gap: 4px; background: #333; padding: 10px; border-radius: 8px; border: 4px solid #444;
         }
         .cell { width: 40px; height: 40px; background: #222; border-radius: 4px; }
         .cell.filled { background: #00d4ff; box-shadow: inset 0 0 10px rgba(255,255,255,0.5); }
-        .cell.hover-ok { background: #555; }
-        .cell.hover-error { background: #600; }
 
-        #pieces-container { display: flex; margin-top: 30px; gap: 20px; min-height: 120px; align-items: center; }
-        .piece { display: grid; gap: 2px; cursor: grab; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
-        .p-block { width: 25px; height: 25px; background: #ffcc00; border-radius: 3px; }
-        .p-empty { width: 25px; height: 25px; }
+        #pieces-container { 
+            display: flex; margin-top: 40px; gap: 30px; min-height: 160px; 
+            align-items: flex-start; justify-content: center; width: 100%;
+        }
+        
+        /* ピース全体のスタイル */
+        .piece { 
+            display: grid; gap: 4px; cursor: grab; padding: 5px; 
+            background: rgba(255,255,255,0.03); border-radius: 4px;
+        }
+        /* 下のピースの1マスも40pxにする */
+        .p-block { width: 40px; height: 40px; background: #ffcc00; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .p-empty { width: 40px; height: 40px; }
+        
+        .piece:active { opacity: 0.5; }
     </style>
 </head>
 <body>
@@ -31,14 +42,9 @@
         let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
         let score = 0;
 
-        // ピースの形状データ (0: 空, 1: ブロック)
         const PIECE_TYPES = [
-            [[1, 1, 1]], // 横3マス
-            [[1], [1], [1]], // 縦3マス
-            [[1, 1], [1, 1]], // 四角
-            [[1, 0], [1, 0], [1, 1]], // L字
-            [[1, 1, 1], [0, 1, 0]], // T字
-            [[1]] // 単体
+            [[1, 1, 1]], [[1], [1], [1]], [[1, 1], [1, 1]], 
+            [[1, 0], [1, 0], [1, 1]], [[1, 1, 1], [0, 1, 0]], [[1]]
         ];
 
         let currentPieces = [];
@@ -70,7 +76,7 @@
                 const pieceEl = document.createElement('div');
                 pieceEl.className = 'piece';
                 pieceEl.draggable = true;
-                pieceEl.style.gridTemplateColumns = `repeat(${type[0].length}, 25px)`;
+                pieceEl.style.gridTemplateColumns = `repeat(${type[0].length}, 40px)`;
                 
                 type.forEach(row => {
                     row.forEach(val => {
@@ -83,6 +89,8 @@
                 pieceEl.ondragstart = (e) => {
                     e.dataTransfer.setData('pieceIdx', i);
                     e.dataTransfer.setData('type', JSON.stringify(type));
+                    // ドラッグ中のイメージのオフセット（指・マウスの位置）を調整
+                    // e.dataTransfer.setDragImage(pieceEl, 20, 20); 
                 };
                 container.appendChild(pieceEl);
                 currentPieces[i] = type;
@@ -96,11 +104,12 @@
 
             if (canPlace(type, r, c)) {
                 placePiece(type, r, c);
-                document.getElementsByClassName('piece')[idx].style.visibility = 'hidden';
+                // 成功したらピースを消す
+                const pieces = document.getElementsByClassName('piece');
+                pieces[idx].style.visibility = 'hidden';
                 currentPieces[idx] = null;
                 
                 checkAndClear();
-                
                 if (currentPieces.every(p => p === null)) spawnPieces();
             }
         }
@@ -130,22 +139,14 @@
         function checkAndClear() {
             let rowsToClear = [];
             let colsToClear = [];
-
-            // 横チェック
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                if (board[r].every(v => v === 1)) rowsToClear.push(r);
-            }
-            // 縦チェック
+            for (let r = 0; r < BOARD_SIZE; r++) if (board[r].every(v => v === 1)) rowsToClear.push(r);
             for (let c = 0; c < BOARD_SIZE; c++) {
                 let count = 0;
                 for (let r = 0; r < BOARD_SIZE; r++) if (board[r][c] === 1) count++;
                 if (count === BOARD_SIZE) colsToClear.push(c);
             }
-
             rowsToClear.forEach(r => board[r] = Array(BOARD_SIZE).fill(0));
-            colsToClear.forEach(c => {
-                for (let r = 0; r < BOARD_SIZE; r++) board[r][c] = 0;
-            });
+            colsToClear.forEach(c => { for (let r = 0; r < BOARD_SIZE; r++) board[r][c] = 0; });
 
             if (rowsToClear.length > 0 || colsToClear.length > 0) {
                 score += (rowsToClear.length + colsToClear.length) * 100;
