@@ -2,36 +2,52 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>ブロックブラスト・ドラッグ版</title>
+    <title>HTML5 ブロックブラスト</title>
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background: #222; color: white; font-family: sans-serif; }
+        body { display: flex; flex-direction: column; align-items: center; background: #1a1a1a; color: white; font-family: 'Arial', sans-serif; touch-action: none; }
+        #score-board { font-size: 24px; margin: 20px; color: #ffcc00; }
         #game-board { 
-            display: grid; grid-template-columns: repeat(8, 45px); grid-template-rows: repeat(8, 45px); 
-            gap: 4px; background: #444; padding: 10px; border-radius: 8px;
+            display: grid; grid-template-columns: repeat(8, 40px); grid-template-rows: repeat(8, 40px); 
+            gap: 4px; background: #333; padding: 10px; border-radius: 8px; border: 4px solid #444;
         }
-        .cell { width: 45px; height: 45px; background: #333; border-radius: 4px; }
-        .cell.filled { background: #00d4ff; transition: 0.2s; }
-        .cell.hover { background: #555; } /* 重なっている時のガイド */
+        .cell { width: 40px; height: 40px; background: #222; border-radius: 4px; }
+        .cell.filled { background: #00d4ff; box-shadow: inset 0 0 10px rgba(255,255,255,0.5); }
+        .cell.hover-ok { background: #555; }
+        .cell.hover-error { background: #600; }
 
-        #pieces-container { display: flex; margin-top: 30px; gap: 40px; }
-        .piece-block { width: 40px; height: 40px; background: #ffcc00; border-radius: 4px; cursor: grab; }
+        #pieces-container { display: flex; margin-top: 30px; gap: 20px; min-height: 120px; align-items: center; }
+        .piece { display: grid; gap: 2px; cursor: grab; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+        .p-block { width: 25px; height: 25px; background: #ffcc00; border-radius: 3px; }
+        .p-empty { width: 25px; height: 25px; }
     </style>
 </head>
 <body>
-    <h1>Block Blast (Drag & Drop)</h1>
+    <div id="score-board">SCORE: <span id="score">0</span></div>
     <div id="game-board"></div>
-
-    <div id="pieces-container">
-        <div class="piece-block" draggable="true" id="p1"></div>
-        <div class="piece-block" draggable="true" id="p2"></div>
-        <div class="piece-block" draggable="true" id="p3"></div>
-    </div>
+    <div id="pieces-container"></div>
 
     <script>
         const BOARD_SIZE = 8;
         let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
+        let score = 0;
 
-        // ボードの生成
+        // ピースの形状データ (0: 空, 1: ブロック)
+        const PIECE_TYPES = [
+            [[1, 1, 1]], // 横3マス
+            [[1], [1], [1]], // 縦3マス
+            [[1, 1], [1, 1]], // 四角
+            [[1, 0], [1, 0], [1, 1]], // L字
+            [[1, 1, 1], [0, 1, 0]], // T字
+            [[1]] // 単体
+        ];
+
+        let currentPieces = [];
+
+        function init() {
+            createBoard();
+            spawnPieces();
+        }
+
         function createBoard() {
             const boardEl = document.getElementById('game-board');
             boardEl.innerHTML = '';
@@ -39,43 +55,110 @@
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell' + (board[r][c] ? ' filled' : '');
-                    cell.dataset.r = r;
-                    cell.dataset.c = c;
-
-                    // ドロップを受け入れる設定
-                    cell.ondragover = (e) => { e.preventDefault(); cell.classList.add('hover'); };
-                    cell.ondragleave = () => cell.classList.remove('hover');
-                    cell.ondrop = (e) => {
-                        e.preventDefault();
-                        cell.classList.remove('hover');
-                        placeBlock(r, c);
-                    };
-                    
+                    cell.ondragover = (e) => e.preventDefault();
+                    cell.ondrop = (e) => handleDrop(e, r, c);
                     boardEl.appendChild(cell);
                 }
             }
         }
 
-        // ブロックを置く処理
-        function placeBlock(r, c) {
-            if (board[r][c] === 0) {
-                board[r][c] = 1;
-                checkLines();
+        function spawnPieces() {
+            const container = document.getElementById('pieces-container');
+            container.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const type = PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
+                const pieceEl = document.createElement('div');
+                pieceEl.className = 'piece';
+                pieceEl.draggable = true;
+                pieceEl.style.gridTemplateColumns = `repeat(${type[0].length}, 25px)`;
+                
+                type.forEach(row => {
+                    row.forEach(val => {
+                        const b = document.createElement('div');
+                        b.className = val ? 'p-block' : 'p-empty';
+                        pieceEl.appendChild(b);
+                    });
+                });
+
+                pieceEl.ondragstart = (e) => {
+                    e.dataTransfer.setData('pieceIdx', i);
+                    e.dataTransfer.setData('type', JSON.stringify(type));
+                };
+                container.appendChild(pieceEl);
+                currentPieces[i] = type;
+            }
+        }
+
+        function handleDrop(e, r, c) {
+            e.preventDefault();
+            const type = JSON.parse(e.dataTransfer.getData('type'));
+            const idx = e.dataTransfer.getData('pieceIdx');
+
+            if (canPlace(type, r, c)) {
+                placePiece(type, r, c);
+                document.getElementsByClassName('piece')[idx].style.visibility = 'hidden';
+                currentPieces[idx] = null;
+                
+                checkAndClear();
+                
+                if (currentPieces.every(p => p === null)) spawnPieces();
+            }
+        }
+
+        function canPlace(type, r, c) {
+            for (let i = 0; i < type.length; i++) {
+                for (let j = 0; j < type[i].length; j++) {
+                    if (type[i][j]) {
+                        if (r + i >= BOARD_SIZE || c + j >= BOARD_SIZE || board[r + i][c + j]) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function placePiece(type, r, c) {
+            for (let i = 0; i < type.length; i++) {
+                for (let j = 0; j < type[i].length; j++) {
+                    if (type[i][j]) board[r + i][c + j] = 1;
+                }
+            }
+            score += 10;
+            updateScore();
+            createBoard();
+        }
+
+        function checkAndClear() {
+            let rowsToClear = [];
+            let colsToClear = [];
+
+            // 横チェック
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                if (board[r].every(v => v === 1)) rowsToClear.push(r);
+            }
+            // 縦チェック
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                let count = 0;
+                for (let r = 0; r < BOARD_SIZE; r++) if (board[r][c] === 1) count++;
+                if (count === BOARD_SIZE) colsToClear.push(c);
+            }
+
+            rowsToClear.forEach(r => board[r] = Array(BOARD_SIZE).fill(0));
+            colsToClear.forEach(c => {
+                for (let r = 0; r < BOARD_SIZE; r++) board[r][c] = 0;
+            });
+
+            if (rowsToClear.length > 0 || colsToClear.length > 0) {
+                score += (rowsToClear.length + colsToClear.length) * 100;
+                updateScore();
                 createBoard();
             }
         }
 
-        // 列消去
-        function checkLines() {
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                if (board[r].every(cell => cell === 1)) {
-                    board[r] = Array(BOARD_SIZE).fill(0);
-                }
-            }
-            // 縦列の消去も本来必要ですが、まずは横列のみ！
+        function updateScore() {
+            document.getElementById('score').innerText = score;
         }
 
-        createBoard();
+        init();
     </script>
 </body>
 </html>
