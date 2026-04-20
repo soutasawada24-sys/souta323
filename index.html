@@ -2,34 +2,32 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>HTML5 ブロックブラスト（サイズ修正版）</title>
+    <title>Block Blast - Advanced</title>
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background: #1a1a1a; color: white; font-family: 'Arial', sans-serif; touch-action: none; margin: 0; padding: 20px; }
-        #score-board { font-size: 32px; margin-bottom: 10px; color: #ffcc00; font-weight: bold; }
-        
-        /* 盤面とピースの1マスを同じ40pxに固定 */
+        body { display: flex; flex-direction: column; align-items: center; background: #121212; color: white; font-family: 'Segoe UI', sans-serif; touch-action: none; margin: 0; padding: 20px; }
+        #score-board { font-size: 36px; margin: 10px; color: #00d4ff; font-weight: bold; text-shadow: 0 0 10px rgba(0,212,255,0.5); }
         #game-board { 
             display: grid; grid-template-columns: repeat(8, 40px); grid-template-rows: repeat(8, 40px); 
-            gap: 4px; background: #333; padding: 10px; border-radius: 8px; border: 4px solid #444;
+            gap: 4px; background: #2a2a2a; padding: 12px; border-radius: 12px; border: 4px solid #333;
         }
-        .cell { width: 40px; height: 40px; background: #222; border-radius: 4px; }
-        .cell.filled { background: #00d4ff; box-shadow: inset 0 0 10px rgba(255,255,255,0.5); }
-
+        .cell { width: 40px; height: 40px; background: #1a1a1a; border-radius: 4px; transition: 0.1s; }
+        .cell.filled { background: #00d4ff; box-shadow: inset 0 0 12px rgba(255,255,255,0.4); }
+        
         #pieces-container { 
-            display: flex; margin-top: 40px; gap: 30px; min-height: 160px; 
-            align-items: flex-start; justify-content: center; width: 100%;
+            display: flex; margin-top: 40px; gap: 20px; min-height: 220px; 
+            align-items: center; justify-content: center; width: 100%;
         }
-        
-        /* ピース全体のスタイル */
-        .piece { 
-            display: grid; gap: 4px; cursor: grab; padding: 5px; 
-            background: rgba(255,255,255,0.03); border-radius: 4px;
+        .piece { display: grid; gap: 4px; cursor: grab; padding: 10px; border-radius: 8px; transition: transform 0.2s; }
+        .piece:active { transform: scale(1.1); opacity: 0.8; }
+        .p-block { width: 35px; height: 35px; background: #ffcc00; border-radius: 4px; }
+        .p-empty { width: 35px; height: 35px; }
+
+        #game-over { 
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9); padding: 40px; border-radius: 20px; text-align: center;
+            border: 2px solid #ff3333; z-index: 100;
         }
-        /* 下のピースの1マスも40pxにする */
-        .p-block { width: 40px; height: 40px; background: #ffcc00; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        .p-empty { width: 40px; height: 40px; }
-        
-        .piece:active { opacity: 0.5; }
+        button { background: #00d4ff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -37,14 +35,26 @@
     <div id="game-board"></div>
     <div id="pieces-container"></div>
 
+    <div id="game-over">
+        <h2 style="color: #ff3333; font-size: 40px;">GAME OVER</h2>
+        <p>最終スコア: <span id="final-score">0</span></p>
+        <button onclick="location.reload()">もう一度プレイ</button>
+    </div>
+
     <script>
         const BOARD_SIZE = 8;
         let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
         let score = 0;
 
-        const PIECE_TYPES = [
-            [[1, 1, 1]], [[1], [1], [1]], [[1, 1], [1, 1]], 
-            [[1, 0], [1, 0], [1, 1]], [[1, 1, 1], [0, 1, 0]], [[1]]
+        // リクエストされた複雑な形
+        const BASE_PIECES = [
+            [[1, 1, 1], [1, 1, 1], [1, 1, 1]], // 3x3 四角
+            [[1, 1, 1], [1, 1, 1]],            // 2x3 四角
+            [[1, 1, 1, 1]],                   // 1x4 直線
+            [[1, 1, 1, 1, 1]],                // 1x5 直線
+            [[1, 1], [1, 1]],                 // 2x2 四角
+            [[1, 1, 1], [0, 0, 1], [0, 0, 1]], // 大きなL字
+            [[0, 1, 0], [1, 1, 1], [0, 1, 0]]  // 十字
         ];
 
         let currentPieces = [];
@@ -52,6 +62,16 @@
         function init() {
             createBoard();
             spawnPieces();
+        }
+
+        // 行列をランダムに回転させる関数
+        function rotatePiece(matrix) {
+            const rotations = Math.floor(Math.random() * 4);
+            let result = matrix;
+            for (let r = 0; r < rotations; r++) {
+                result = result[0].map((_, colIndex) => result.map(row => row[colIndex]).reverse());
+            }
+            return result;
         }
 
         function createBoard() {
@@ -72,11 +92,13 @@
             const container = document.getElementById('pieces-container');
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
-                const type = PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
+                let type = BASE_PIECES[Math.floor(Math.random() * BASE_PIECES.length)];
+                type = rotatePiece(type); // ランダム回転適用
+
                 const pieceEl = document.createElement('div');
                 pieceEl.className = 'piece';
                 pieceEl.draggable = true;
-                pieceEl.style.gridTemplateColumns = `repeat(${type[0].length}, 40px)`;
+                pieceEl.style.gridTemplateColumns = `repeat(${type[0].length}, 35px)`;
                 
                 type.forEach(row => {
                     row.forEach(val => {
@@ -89,12 +111,11 @@
                 pieceEl.ondragstart = (e) => {
                     e.dataTransfer.setData('pieceIdx', i);
                     e.dataTransfer.setData('type', JSON.stringify(type));
-                    // ドラッグ中のイメージのオフセット（指・マウスの位置）を調整
-                    // e.dataTransfer.setDragImage(pieceEl, 20, 20); 
                 };
                 container.appendChild(pieceEl);
                 currentPieces[i] = type;
             }
+            checkGameOver();
         }
 
         function handleDrop(e, r, c) {
@@ -104,13 +125,12 @@
 
             if (canPlace(type, r, c)) {
                 placePiece(type, r, c);
-                // 成功したらピースを消す
-                const pieces = document.getElementsByClassName('piece');
-                pieces[idx].style.visibility = 'hidden';
+                document.getElementsByClassName('piece')[idx].style.visibility = 'hidden';
                 currentPieces[idx] = null;
                 
                 checkAndClear();
                 if (currentPieces.every(p => p === null)) spawnPieces();
+                else checkGameOver();
             }
         }
 
@@ -131,7 +151,7 @@
                     if (type[i][j]) board[r + i][c + j] = 1;
                 }
             }
-            score += 10;
+            score += (type.flat().filter(v => v).length) * 2;
             updateScore();
             createBoard();
         }
@@ -152,6 +172,23 @@
                 score += (rowsToClear.length + colsToClear.length) * 100;
                 updateScore();
                 createBoard();
+            }
+        }
+
+        function checkGameOver() {
+            let possible = false;
+            currentPieces.forEach(type => {
+                if (!type) return;
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        if (canPlace(type, r, c)) possible = true;
+                    }
+                }
+            });
+
+            if (!possible && currentPieces.some(p => p !== null)) {
+                document.getElementById('game-over').style.display = 'block';
+                document.getElementById('final-score').innerText = score;
             }
         }
 
