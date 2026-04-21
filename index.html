@@ -2,14 +2,19 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Block Blast - Smooth Drag</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Block Blast - Optimized</title>
     <style>
+        * { box-sizing: border-box; }
         body { 
             display: flex; flex-direction: column; align-items: center; 
             background: #121212; color: white; font-family: 'Segoe UI', sans-serif; 
-            overflow: hidden; margin: 0; padding: 20px; user-select: none;
+            overflow: hidden; margin: 0; 
+            height: 100vh; /* 画面の高さに固定 */
+            justify-content: center; /* 全体を中央に寄せる */
+            user-select: none; touch-action: none;
         }
-        #score-board { font-size: 36px; margin: 10px; color: #00d4ff; font-weight: bold; }
+        #score-board { font-size: clamp(24px, 5vh, 36px); margin-bottom: 10px; color: #00d4ff; font-weight: bold; }
         
         #game-board { 
             display: grid; grid-template-columns: repeat(8, 45px); grid-template-rows: repeat(8, 45px); 
@@ -18,21 +23,33 @@
         }
         .cell { width: 45px; height: 45px; background: #1a1a1a; border-radius: 4px; }
         .cell.filled { background: #00d4ff; box-shadow: inset 0 0 12px rgba(255,255,255,0.4); }
-        .cell.preview { background: rgba(0, 212, 255, 0.3); } /* 重なっている時のプレビュー */
+        .cell.preview { background: rgba(0, 212, 255, 0.3); }
 
         #pieces-container { 
-            display: flex; margin-top: 50px; gap: 30px; min-height: 200px; 
-            justify-content: center; width: 100%;
+            display: flex; 
+            margin-top: 20px; 
+            gap: 15px; 
+            height: 160px; /* 高さを確保して途切れを防止 */
+            justify-content: center; 
+            align-items: center; /* ピースを上下中央に配置 */
+            width: 100%;
         }
 
-        /* ドラッグ中のピースのスタイル */
         .piece { 
             display: grid; gap: 4px; cursor: grab; position: relative;
             z-index: 10; transition: transform 0.1s;
+            transform: scale(0.8); /* コンテナ内では少し小さくして全体を見やすく */
         }
-        .dragging { position: fixed; z-index: 1000; pointer-events: none; transform: scale(1.1); }
         
-        /* ピースの1マスのサイズを盤面と完全一致(45px) */
+        /* ドラッグ中は実寸大に戻し、指より少し上に表示 */
+        .dragging { 
+            position: fixed; 
+            z-index: 1000; 
+            pointer-events: none; 
+            transform: scale(1.0) translateY(-60px); /* 60px上に浮かせることで見やすく */
+            opacity: 0.9;
+        }
+        
         .p-block { width: 45px; height: 45px; background: #ffcc00; border-radius: 4px; }
         .p-empty { width: 45px; height: 45px; }
 
@@ -57,8 +74,8 @@
 
     <script>
         const BOARD_SIZE = 8;
-        const CELL_SIZE = 45; // マスのサイズ
-        const GAP = 4;        // 隙間のサイズ
+        const CELL_SIZE = 45;
+        const GAP = 4;
         let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
         let score = 0;
 
@@ -102,12 +119,17 @@
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
                 let type = rotatePiece(BASE_PIECES[Math.floor(Math.random() * BASE_PIECES.length)]);
+                const pieceWrapper = document.createElement('div'); // 途切れ防止用のラッパー
+                pieceWrapper.style.width = "100px";
+                pieceWrapper.style.display = "flex";
+                pieceWrapper.style.justifyContent = "center";
+
                 const pieceEl = document.createElement('div');
                 pieceEl.className = 'piece';
                 pieceEl.style.gridTemplateColumns = `repeat(${type[0].length}, ${CELL_SIZE}px)`;
                 
-                type.forEach((row, rIdx) => {
-                    row.forEach((val, cIdx) => {
+                type.forEach((row) => {
+                    row.forEach((val) => {
                         const b = document.createElement('div');
                         b.className = val ? 'p-block' : 'p-empty';
                         pieceEl.appendChild(b);
@@ -115,20 +137,24 @@
                 });
 
                 addDragListeners(pieceEl, type, i);
-                container.appendChild(pieceEl);
+                pieceWrapper.appendChild(pieceEl);
+                container.appendChild(pieceWrapper);
                 currentPieces[i] = type;
             }
             checkGameOver();
         }
 
-        // --- 独自ドラッグロジック ---
         function addDragListeners(el, type, index) {
             el.onmousedown = (e) => startDrag(e, el, type, index);
-            el.ontouchstart = (e) => startDrag(e.touches[0], el, type, index);
+            el.ontouchstart = (e) => {
+                e.preventDefault();
+                startDrag(e.touches[0], el, type, index);
+            };
         }
 
         function startDrag(e, el, type, index) {
             const rect = el.getBoundingClientRect();
+            // ドラッグ開始時のマウス/指と要素のズレ
             const offsetX = e.clientX - rect.left;
             const offsetY = e.clientY - rect.top;
 
@@ -138,12 +164,21 @@
             el.style.visibility = 'hidden';
 
             const moveAt = (clientX, clientY) => {
-                clone.style.left = clientX - offsetX + 'px';
-                clone.style.top = clientY - offsetY + 'px';
-                updatePreview(clientX - offsetX, clientY - offsetY, type);
+                // 指の上に表示されるように調整
+                const displayX = clientX - offsetX;
+                const displayY = clientY - offsetY;
+                clone.style.left = displayX + 'px';
+                clone.style.top = displayY + 'px';
+                
+                // プレビュー計算（translateY(-60px)を考慮して判定位置を補正）
+                updatePreview(displayX, displayY - 60, type);
             };
 
-            const onMove = (ev) => moveAt(ev.clientX || ev.touches[0].clientX, ev.clientY || ev.touches[0].clientY);
+            const onMove = (ev) => {
+                const cx = ev.clientX ?? ev.touches[0].clientX;
+                const cy = ev.clientY ?? ev.touches[0].clientY;
+                moveAt(cx, cy);
+            };
             
             document.addEventListener('mousemove', onMove);
             document.addEventListener('touchmove', onMove, {passive: false});
@@ -151,10 +186,12 @@
             const onEnd = (ev) => {
                 document.removeEventListener('mousemove', onMove);
                 document.removeEventListener('touchmove', onMove);
-                const finalX = ev.clientX || ev.changedTouches[0].clientX;
-                const finalY = ev.clientY || ev.changedTouches[0].clientY;
+                const finalX = ev.clientX ?? ev.changedTouches[0].clientX;
+                const finalY = ev.clientY ?? ev.changedTouches[0].clientY;
                 
-                const pos = getBoardPos(finalX - offsetX, finalY - offsetY);
+                // 判定も補正後の位置で行う
+                const pos = getBoardPos(finalX - offsetX, finalY - offsetY - 60);
+                
                 if (pos && canPlace(type, pos.r, pos.c)) {
                     placePiece(type, pos.r, pos.c);
                     currentPieces[index] = null;
@@ -166,6 +203,8 @@
                     clone.remove();
                 }
                 clearPreview();
+                document.onmouseup = null;
+                document.ontouchend = null;
             };
 
             document.onmouseup = onEnd;
@@ -175,9 +214,9 @@
         function getBoardPos(x, y) {
             const boardEl = document.getElementById('game-board');
             const rect = boardEl.getBoundingClientRect();
-            // どのマスの上にいるか計算
-            const c = Math.round((x - rect.left - 10) / (CELL_SIZE + GAP));
-            const r = Math.round((y - rect.top - 10) / (CELL_SIZE + GAP));
+            // 判定をより正確にするためのオフセット調整
+            const c = Math.round((x - rect.left - 12) / (CELL_SIZE + GAP));
+            const r = Math.round((y - rect.top - 12) / (CELL_SIZE + GAP));
             if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) return {r, c};
             return null;
         }
