@@ -10,8 +10,8 @@
             display: flex; flex-direction: column; align-items: center; 
             background: #121212; color: white; font-family: 'Segoe UI', sans-serif; 
             overflow: hidden; margin: 0; 
-            height: 100vh; /* 画面の高さに固定 */
-            justify-content: center; /* 全体を中央に寄せる */
+            height: 100vh; 
+            justify-content: center; 
             user-select: none; touch-action: none;
         }
         #score-board { font-size: clamp(24px, 5vh, 36px); margin-bottom: 10px; color: #00d4ff; font-weight: bold; }
@@ -28,25 +28,26 @@
         #pieces-container { 
             display: flex; 
             margin-top: 20px; 
-            gap: 15px; 
-            height: 160px; /* 高さを確保して途切れを防止 */
-            justify-content: center; 
-            align-items: center; /* ピースを上下中央に配置 */
+            /* space-aroundで間隔を均等に配置 */
+            justify-content: space-around; 
+            align-items: center; 
             width: 100%;
+            max-width: 500px; /* 広がりすぎ防止 */
+            height: 180px; 
         }
 
         .piece { 
             display: grid; gap: 4px; cursor: grab; position: relative;
             z-index: 10; transition: transform 0.1s;
-            transform: scale(0.8); /* コンテナ内では少し小さくして全体を見やすく */
+            /* 表示サイズを維持しつつ中央寄せ */
+            margin: 0 auto;
         }
         
-        /* ドラッグ中は実寸大に戻し、指より少し上に表示 */
         .dragging { 
             position: fixed; 
             z-index: 1000; 
             pointer-events: none; 
-            transform: scale(1.0) translateY(-60px); /* 60px上に浮かせることで見やすく */
+            transform: scale(1.0) translateY(-60px); 
             opacity: 0.9;
         }
         
@@ -79,10 +80,15 @@
         let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
         let score = 0;
 
+        // ブロックリスト：十字を消し、3x2のL字を追加
         const BASE_PIECES = [
-            [[1, 1, 1], [1, 1, 1], [1, 1, 1]], 
-            [[1, 1, 1], [1, 1, 1]], [[1, 1, 1, 1]], [[1, 1, 1, 1, 1]],
-            [[1, 1], [1, 1]], [[1, 1, 1], [0, 0, 1], [0, 0, 1]], [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
+            [[1, 1, 1], [1, 1, 1], [1, 1, 1]], // 3x3正方形
+            [[1, 1, 1], [1, 1, 1]],           // 2x3長方形
+            [[1, 1, 1, 1]],                    // 1x4棒
+            [[1, 1, 1, 1, 1]],                 // 1x5棒
+            [[1, 1], [1, 1]],                  // 2x2正方形
+            [[1, 1, 1], [0, 0, 1], [0, 0, 1]], // 巨大L字
+            [[1, 0], [1, 0], [1, 1]]           // ★追加：3x2のL字ブロック
         ];
 
         let currentPieces = [];
@@ -119,8 +125,10 @@
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
                 let type = rotatePiece(BASE_PIECES[Math.floor(Math.random() * BASE_PIECES.length)]);
-                const pieceWrapper = document.createElement('div'); // 途切れ防止用のラッパー
-                pieceWrapper.style.width = "100px";
+                
+                const pieceWrapper = document.createElement('div');
+                // 幅をブロック数に合わせて確保することで重なりを防止
+                pieceWrapper.style.width = `${type[0].length * (CELL_SIZE + GAP)}px`;
                 pieceWrapper.style.display = "flex";
                 pieceWrapper.style.justifyContent = "center";
 
@@ -154,7 +162,6 @@
 
         function startDrag(e, el, type, index) {
             const rect = el.getBoundingClientRect();
-            // ドラッグ開始時のマウス/指と要素のズレ
             const offsetX = e.clientX - rect.left;
             const offsetY = e.clientY - rect.top;
 
@@ -164,13 +171,10 @@
             el.style.visibility = 'hidden';
 
             const moveAt = (clientX, clientY) => {
-                // 指の上に表示されるように調整
                 const displayX = clientX - offsetX;
                 const displayY = clientY - offsetY;
                 clone.style.left = displayX + 'px';
                 clone.style.top = displayY + 'px';
-                
-                // プレビュー計算（translateY(-60px)を考慮して判定位置を補正）
                 updatePreview(displayX, displayY - 60, type);
             };
 
@@ -189,7 +193,6 @@
                 const finalX = ev.clientX ?? ev.changedTouches[0].clientX;
                 const finalY = ev.clientY ?? ev.changedTouches[0].clientY;
                 
-                // 判定も補正後の位置で行う
                 const pos = getBoardPos(finalX - offsetX, finalY - offsetY - 60);
                 
                 if (pos && canPlace(type, pos.r, pos.c)) {
@@ -214,7 +217,6 @@
         function getBoardPos(x, y) {
             const boardEl = document.getElementById('game-board');
             const rect = boardEl.getBoundingClientRect();
-            // 判定をより正確にするためのオフセット調整
             const c = Math.round((x - rect.left - 12) / (CELL_SIZE + GAP));
             const r = Math.round((y - rect.top - 12) / (CELL_SIZE + GAP));
             if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) return {r, c};
