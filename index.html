@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Block Blast - Optimized</title>
+    <title>Block Blast - Colorful & Ranking</title>
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -21,45 +21,52 @@
             gap: 4px; background: #2a2a2a; padding: 12px; border-radius: 12px; border: 4px solid #333;
             position: relative;
         }
-        .cell { width: 45px; height: 45px; background: #1a1a1a; border-radius: 4px; }
-        .cell.filled { background: #00d4ff; box-shadow: inset 0 0 12px rgba(255,255,255,0.4); }
-        .cell.preview { background: rgba(0, 212, 255, 0.3); }
+        .cell { width: 45px; height: 45px; background: #1a1a1a; border-radius: 4px; transition: background 0.2s; }
+        /* 色クラス */
+        .color-0 { background: #ff4757; } /* 赤系 */
+        .color-1 { background: #1e90ff; } /* 青系 */
+        .color-2 { background: #2ed573; } /* 緑系 */
+        .color-3 { background: #ffa502; } /* オレンジ系 */
+        .color-4 { background: #eccc68; } /* 黄色系 */
+        .color-5 { background: #a29bfe; } /* 紫系 */
+        .color-6 { background: #ff6b81; } /* ピンク系 */
+        
+        .cell.filled { box-shadow: inset 0 0 10px rgba(255,255,255,0.3); }
+        .cell.preview { background: rgba(255, 255, 255, 0.2); }
 
         #pieces-container { 
-            display: flex; 
-            margin-top: 20px; 
-            /* space-aroundで間隔を均等に配置 */
-            justify-content: space-around; 
-            align-items: center; 
-            width: 100%;
-            max-width: 500px; /* 広がりすぎ防止 */
-            height: 180px; 
+            display: flex; margin-top: 20px; justify-content: space-around; 
+            align-items: center; width: 100%; max-width: 500px; height: 180px; 
         }
 
-        .piece { 
-            display: grid; gap: 4px; cursor: grab; position: relative;
-            z-index: 10; transition: transform 0.1s;
-            /* 表示サイズを維持しつつ中央寄せ */
-            margin: 0 auto;
-        }
-        
+        .piece { display: grid; gap: 4px; cursor: grab; position: relative; z-index: 10; }
         .dragging { 
-            position: fixed; 
-            z-index: 1000; 
-            pointer-events: none; 
-            transform: scale(1.0) translateY(-60px); 
-            opacity: 0.9;
+            position: fixed; z-index: 1000; pointer-events: none; 
+            transform: scale(1.0) translateY(-60px); opacity: 0.9;
         }
         
-        .p-block { width: 45px; height: 45px; background: #ffcc00; border-radius: 4px; }
+        .p-block { width: 45px; height: 45px; border-radius: 4px; }
         .p-empty { width: 45px; height: 45px; }
 
-        #game-over { 
+        /* モーダル共通設定 */
+        #game-over, #ranking-screen { 
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95); padding: 40px; border-radius: 20px; text-align: center;
-            border: 2px solid #ff3333; z-index: 2000;
+            background: rgba(20, 20, 20, 0.98); padding: 30px; border-radius: 20px; text-align: center;
+            border: 2px solid #00d4ff; z-index: 2000; width: 90%; max-width: 400px;
         }
-        button { background: #00d4ff; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; font-size: 18px; }
+        
+        input { 
+            padding: 10px; width: 80%; border-radius: 5px; border: none; margin: 10px 0;
+            font-size: 16px; text-align: center;
+        }
+        
+        button { 
+            background: #00d4ff; border: none; padding: 10px 20px; border-radius: 8px; 
+            cursor: pointer; font-weight: bold; margin: 5px; font-size: 16px; color: #000;
+        }
+
+        #ranking-list { text-align: left; margin: 15px 0; list-style: none; padding: 0; }
+        #ranking-list li { padding: 8px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
@@ -68,27 +75,36 @@
     <div id="pieces-container"></div>
 
     <div id="game-over">
-        <h2 style="color: #ff3333; font-size: 40px; margin: 0;">GAME OVER</h2>
+        <h2 style="color: #ff3333; font-size: 32px; margin: 0;">GAME OVER</h2>
         <p>スコア: <span id="final-score">0</span></p>
-        <button onclick="location.reload()">再挑戦</button>
+        <input type="text" id="player-name" placeholder="名前を入力" maxlength="10">
+        <br>
+        <button onclick="saveScore()">スコアを保存</button>
+        <button onclick="location.reload()" style="background:#888">保存せず再挑戦</button>
+    </div>
+
+    <div id="ranking-screen">
+        <h2 style="color: #00d4ff;">TOP RANKING</h2>
+        <ul id="ranking-list"></ul>
+        <button onclick="location.reload()">タイトルへ戻る</button>
     </div>
 
     <script>
         const BOARD_SIZE = 8;
         const CELL_SIZE = 45;
         const GAP = 4;
+        // boardには色のインデックスを保存するように変更 (0は空、1以上は色ID)
         let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
         let score = 0;
 
-        // ブロックリスト：十字を消し、3x2のL字を追加
         const BASE_PIECES = [
-            [[1, 1, 1], [1, 1, 1], [1, 1, 1]], // 3x3正方形
-            [[1, 1, 1], [1, 1, 1]],           // 2x3長方形
-            [[1, 1, 1, 1]],                    // 1x4棒
-            [[1, 1, 1, 1, 1]],                 // 1x5棒
-            [[1, 1], [1, 1]],                  // 2x2正方形
-            [[1, 1, 1], [0, 0, 1], [0, 0, 1]], // 巨大L字
-            [[1, 0], [1, 0], [1, 1]]           // ★追加：3x2のL字ブロック
+            [[1, 1, 1], [1, 1, 1], [1, 1, 1]], 
+            [[1, 1, 1], [1, 1, 1]],           
+            [[1, 1, 1, 1]],                    
+            [[1, 1, 1, 1, 1]],                 
+            [[1, 1], [1, 1]],                  
+            [[1, 1, 1], [0, 0, 1], [0, 0, 1]], 
+            [[1, 0], [1, 0], [1, 1]]           
         ];
 
         let currentPieces = [];
@@ -104,7 +120,8 @@
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const cell = document.createElement('div');
-                    cell.className = 'cell' + (board[r][c] ? ' filled' : '');
+                    const colorId = board[r][c];
+                    cell.className = 'cell' + (colorId ? ` filled color-${colorId - 1}` : '');
                     cell.id = `cell-${r}-${c}`;
                     boardEl.appendChild(cell);
                 }
@@ -125,9 +142,9 @@
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
                 let type = rotatePiece(BASE_PIECES[Math.floor(Math.random() * BASE_PIECES.length)]);
+                const colorIndex = Math.floor(Math.random() * 7); // 0-6の色
                 
                 const pieceWrapper = document.createElement('div');
-                // 幅をブロック数に合わせて確保することで重なりを防止
                 pieceWrapper.style.width = `${type[0].length * (CELL_SIZE + GAP)}px`;
                 pieceWrapper.style.display = "flex";
                 pieceWrapper.style.justifyContent = "center";
@@ -139,28 +156,30 @@
                 type.forEach((row) => {
                     row.forEach((val) => {
                         const b = document.createElement('div');
-                        b.className = val ? 'p-block' : 'p-empty';
+                        // ピースに色を適用
+                        b.className = val ? `p-block color-${colorIndex}` : 'p-empty';
                         pieceEl.appendChild(b);
                     });
                 });
 
-                addDragListeners(pieceEl, type, i);
+                // color情報も渡す
+                addDragListeners(pieceEl, type, i, colorIndex + 1);
                 pieceWrapper.appendChild(pieceEl);
                 container.appendChild(pieceWrapper);
-                currentPieces[i] = type;
+                currentPieces[i] = { type, colorId: colorIndex + 1 };
             }
             checkGameOver();
         }
 
-        function addDragListeners(el, type, index) {
-            el.onmousedown = (e) => startDrag(e, el, type, index);
+        function addDragListeners(el, type, index, colorId) {
+            el.onmousedown = (e) => startDrag(e, el, type, index, colorId);
             el.ontouchstart = (e) => {
                 e.preventDefault();
-                startDrag(e.touches[0], el, type, index);
+                startDrag(e.touches[0], el, type, index, colorId);
             };
         }
 
-        function startDrag(e, el, type, index) {
+        function startDrag(e, el, type, index, colorId) {
             const rect = el.getBoundingClientRect();
             const offsetX = e.clientX - rect.left;
             const offsetY = e.clientY - rect.top;
@@ -196,7 +215,7 @@
                 const pos = getBoardPos(finalX - offsetX, finalY - offsetY - 60);
                 
                 if (pos && canPlace(type, pos.r, pos.c)) {
-                    placePiece(type, pos.r, pos.c);
+                    placePiece(type, pos.r, pos.c, colorId);
                     currentPieces[index] = null;
                     clone.remove();
                     if (currentPieces.every(p => p === null)) spawnPieces();
@@ -253,10 +272,10 @@
             return true;
         }
 
-        function placePiece(type, r, c) {
+        function placePiece(type, r, c, colorId) {
             for (let i = 0; i < type.length; i++) {
                 for (let j = 0; j < type[i].length; j++) {
-                    if (type[i][j]) board[r + i][c + j] = 1;
+                    if (type[i][j]) board[r + i][c + j] = colorId;
                 }
             }
             score += (type.flat().filter(v => v).length) * 2;
@@ -267,10 +286,10 @@
 
         function checkAndClear() {
             let rs = [], cs = [];
-            for (let r = 0; r < BOARD_SIZE; r++) if (board[r].every(v => v === 1)) rs.push(r);
+            for (let r = 0; r < BOARD_SIZE; r++) if (board[r].every(v => v !== 0)) rs.push(r);
             for (let c = 0; c < BOARD_SIZE; c++) {
                 let count = 0;
-                for (let r = 0; r < BOARD_SIZE; r++) if (board[r][c] === 1) count++;
+                for (let r = 0; r < BOARD_SIZE; r++) if (board[r][c] !== 0) count++;
                 if (count === BOARD_SIZE) cs.push(c);
             }
             rs.forEach(r => board[r] = Array(BOARD_SIZE).fill(0));
@@ -283,11 +302,11 @@
 
         function checkGameOver() {
             let possible = false;
-            currentPieces.forEach(type => {
-                if (!type) return;
+            currentPieces.forEach(p => {
+                if (!p) return;
                 for (let r = 0; r < BOARD_SIZE; r++) {
                     for (let c = 0; c < BOARD_SIZE; c++) {
-                        if (canPlace(type, r, c)) possible = true;
+                        if (canPlace(p.type, r, c)) possible = true;
                     }
                 }
             });
@@ -298,6 +317,29 @@
         }
 
         function updateScore() { document.getElementById('score').innerText = score; }
+
+        // --- ランキング処理 ---
+        function saveScore() {
+            const name = document.getElementById('player-name').value || "ななし";
+            const ranking = JSON.parse(localStorage.getItem('blockBlastRanking') || "[]");
+            ranking.push({ name, score });
+            ranking.sort((a, b) => b.score - a.score);
+            const topRanking = ranking.slice(0, 5); // 上位5件
+            localStorage.setItem('blockBlastRanking', JSON.stringify(topRanking));
+            
+            showRanking();
+        }
+
+        function showRanking() {
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('ranking-screen').style.display = 'block';
+            const list = document.getElementById('ranking-list');
+            const ranking = JSON.parse(localStorage.getItem('blockBlastRanking') || "[]");
+            
+            list.innerHTML = ranking.map((entry, i) => 
+                `<li><span>${i+1}. ${entry.name}</span> <span>${entry.score} pts</span></li>`
+            ).join('');
+        }
 
         init();
     </script>
