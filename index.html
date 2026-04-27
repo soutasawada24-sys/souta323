@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Block Blast - God Mode Edition</title>
+    <title>Block Blast - Global Edition</title>
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -19,7 +19,7 @@
             gap: 4px; background: #2a2a2a; padding: 12px; border-radius: 12px; border: 4px solid #333;
             position: relative;
         }
-        .cell { width: 45px; height: 45px; background: #1a1a1a; border-radius: 4px; position: relative; }
+        .cell { width: 45px; height: 45px; background: #1a1a1a; border-radius: 4px; position: relative;}
         
         .color-1 { background: #ff4757; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
         .color-2 { background: #1e90ff; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
@@ -45,14 +45,20 @@
         .p-block { width: 45px; height: 45px; border-radius: 4px; }
         .p-empty { width: 45px; height: 45px; }
 
-        /* エフェクト用 */
+        /* --- エフェクト用 CSS --- */
         .particle {
-            position: absolute; width: 8px; height: 8px; border-radius: 2px;
-            pointer-events: none; z-index: 100; animation: fly 0.6s ease-out forwards;
+            position: absolute; width: 12px; height: 12px; border-radius: 2px;
+            pointer-events: none; z-index: 100;
+            animation: fly 0.6s ease-out forwards;
         }
         @keyframes fly {
-            0% { transform: translate(0,0) scale(1); opacity: 1; }
-            100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+            0% { transform: translate(0,0) scale(1.5) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(0) rotate(var(--dr)); opacity: 0; }
+        }
+        .cell.flash { animation: cell-flash 0.5s ease-out; }
+        @keyframes cell-flash {
+            0% { background-color: rgba(255, 255, 255, 0.8); }
+            100% { background-color: transparent; }
         }
 
         #game-over, #ranking-screen { 
@@ -111,6 +117,7 @@
         let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
         let score = 0;
 
+        // --- ブロック定義（S字型を追加）---
         const BASE_PIECES = [
             [[1, 1, 1], [1, 1, 1], [1, 1, 1]], 
             [[1, 1, 1], [1, 1, 1]],           
@@ -118,7 +125,8 @@
             [[1, 1, 1, 1, 1]],                 
             [[1, 1], [1, 1]],                  
             [[1, 1, 1], [0, 0, 1], [0, 0, 1]], 
-            [[1, 0], [1, 0], [1, 1]]
+            [[1, 0], [1, 0], [1, 1]],
+            [[0, 1, 1], [1, 1, 0]],            // S字型ブロック 
         ];
 
         let currentPieces = [];
@@ -142,11 +150,10 @@
             }
         }
 
-        // --- AI選別システム ---
+        // --- AI選別システム（緩め） ---
         function getSmartPiece() {
             let candidates = [];
             
-            // 全ての基本形とその回転パターンを検証
             for (let pIdx = 0; pIdx < BASE_PIECES.length; pIdx++) {
                 let base = BASE_PIECES[pIdx];
                 for (let rot = 0; rot < 4; rot++) {
@@ -154,7 +161,6 @@
                     for(let i=0; i<rot; i++) shape = shape[0].map((_, ci) => shape.map(row => row[ci]).reverse());
                     
                     let bestFitScore = -1;
-                    // 盤面の全マスで「置けるか」と「置いた時のメリット」を計算
                     for (let r = 0; r < BOARD_SIZE; r++) {
                         for (let c = 0; c < BOARD_SIZE; c++) {
                             if (canPlace(shape, r, c)) {
@@ -163,25 +169,25 @@
                             }
                         }
                     }
-                    // 置ける場所があるなら候補に入れる
-                    if (bestFitScore >= 0) {
-                        candidates.push({ shape, score: bestFitScore });
-                    }
+                    if (bestFitScore >= 0) candidates.push({ shape, score: bestFitScore });
                 }
             }
 
-            // 置ける形が一つもない場合は詰み（通常は起こらない）
-            if (candidates.length === 0) return rotatePiece(BASE_PIECES[0]);
+            if (candidates.length === 0) return rotatePiece(BASE_PIECES[Math.floor(Math.random() * BASE_PIECES.length)]);
 
-            // メリットが高い順にソートして上位からランダム抽選（接待レベル高）
+            // --- ここで忖度度合いを調整 ---
             candidates.sort((a, b) => b.score - a.score);
-            const topK = Math.min(candidates.length, 5);
-            return candidates[Math.floor(Math.random() * topK)].shape;
+            // 上位5つではなく、全体から選ぶ確率を増やすことで「神引き」を減らす
+            const topK = Math.min(candidates.length, 12); // 候補を増やす
+            const selectedIdx = (Math.random() < 0.3) // 30%の確率で
+                ? Math.floor(Math.random() * candidates.length) // 全候補からランダム（忖度なし）
+                : Math.floor(Math.random() * topK); // 上位候補からランダム（忖度あり）
+
+            return candidates[selectedIdx].shape;
         }
 
         function calculateFitScore(shape, r, c) {
             let s = 0;
-            // 1. 列・行が完成するか（大メリット）
             let tempBoard = board.map(row => [...row]);
             shape.forEach((row, i) => {
                 row.forEach((val, j) => {
@@ -195,15 +201,24 @@
                 for (let j = 0; j < BOARD_SIZE; j++) if (tempBoard[j][i] === 0) colFull = false;
                 if (colFull) s += 10;
             }
-            // 2. 既存ブロックに隣接しているか（隙間を埋める）
             return s;
+        }
+
+        // --- 回転関数を追加 ---
+        function rotatePiece(matrix) {
+            const rotations = Math.floor(Math.random() * 4);
+            let result = matrix;
+            for (let r = 0; r < rotations; r++) {
+                result = result[0].map((_, colIndex) => result.map(row => row[colIndex]).reverse());
+            }
+            return result;
         }
 
         function spawnPieces() {
             const container = document.getElementById('pieces-container');
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
-                let shape = getSmartPiece(); // AIが選別
+                let shape = getSmartPiece(); // AIが選別（緩め）
                 const colorId = Math.floor(Math.random() * 7) + 1;
                 const pieceWrapper = document.createElement('div');
                 pieceWrapper.style.width = `${shape[0].length * (CELL_SIZE + GAP)}px`;
@@ -225,25 +240,37 @@
             checkGameOver();
         }
 
-        // パーティクル演出
-        function createParticles(r, c, colorClass) {
+        // --- 激しいパーティクル演出 ---
+        function createParticles(r, c, colorClass, intensity = 6) {
             const cell = document.getElementById(`cell-${r}-${c}`);
             const rect = cell.getBoundingClientRect();
             const color = getComputedStyle(document.querySelector('.' + colorClass)).backgroundColor;
             
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < intensity; i++) {
                 const p = document.createElement('div');
                 p.className = 'particle';
                 p.style.backgroundColor = color;
                 p.style.left = (rect.left + rect.width / 2) + 'px';
                 p.style.top = (rect.top + rect.height / 2) + 'px';
-                const dx = (Math.random() - 0.5) * 100 + 'px';
-                const dy = (Math.random() - 0.5) * 100 + 'px';
+                
+                // --- 激しさをアップ ---
+                const dx = (Math.random() - 0.5) * 150 + 'px'; // 飛ぶ距離を延ばす
+                const dy = (Math.random() - 0.5) * 150 + 'px';
+                const dr = (Math.random() - 0.5) * 1000 + 'deg'; // 回転を増やす
+                
                 p.style.setProperty('--dx', dx);
                 p.style.setProperty('--dy', dy);
+                p.style.setProperty('--dr', dr);
                 document.body.appendChild(p);
                 setTimeout(() => p.remove(), 600);
             }
+        }
+
+        // 行・列消去時のフラッシュエフェクト
+        function flashCell(r, c) {
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            cell.classList.add('flash');
+            setTimeout(() => cell.classList.remove('flash'), 500);
         }
 
         function addDragListeners(el, shape, index, colorId) {
@@ -339,7 +366,7 @@
                 row.forEach((val, j) => {
                     if (val) {
                         board[r + i][c + j] = colorId;
-                        createParticles(r + i, c + j, `color-${colorId}`);
+                        createParticles(r + i, c + j, `color-${colorId}`, 8); //intensityアップ
                     }
                 });
             });
@@ -358,8 +385,24 @@
                 for (let r = 0; r < BOARD_SIZE; r++) if (board[r][c] === 0) isFull = false;
                 if (isFull) fullCols.push(c);
             }
-            fullRows.forEach(r => board[r] = Array(BOARD_SIZE).fill(0));
-            fullCols.forEach(c => { for (let r = 0; r < BOARD_SIZE; r++) board[r][c] = 0; });
+            
+            // フラッシュと追加パーティクル
+            fullRows.forEach(r => {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    flashCell(r, c);
+                    createParticles(r, c, `color-${Math.floor(Math.random()*7)+1}`, 10); // 消える瞬間のパーティクル
+                }
+                board[r] = Array(BOARD_SIZE).fill(0);
+            });
+            
+            fullCols.forEach(c => {
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    flashCell(r, c);
+                    createParticles(r, c, `color-${Math.floor(Math.random()*7)+1}`, 10); // 消える瞬間のパーティクル
+                    board[r][c] = 0;
+                }
+            });
+            
             if (fullRows.length > 0 || fullCols.length > 0) score += (fullRows.length + fullCols.length) * 100;
         }
 
