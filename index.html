@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Block Blast - Final Edition</title>
+    <title>Block Blast - Global Edition</title>
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -21,7 +21,6 @@
         }
         .cell { width: 45px; height: 45px; background: #1a1a1a; border-radius: 4px; }
         
-        /* ブロックの色定義（置いた後も反映される） */
         .color-1 { background: #ff4757; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
         .color-2 { background: #1e90ff; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
         .color-3 { background: #2ed573; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
@@ -46,7 +45,6 @@
         .p-block { width: 45px; height: 45px; border-radius: 4px; }
         .p-empty { width: 45px; height: 45px; }
 
-        /* モーダル */
         #game-over, #ranking-screen { 
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(15, 15, 15, 0.98); padding: 30px; border-radius: 20px; text-align: center;
@@ -70,7 +68,7 @@
         <h2 style="color: #ff3333; margin: 0;">GAME OVER</h2>
         <p>最終スコア: <span id="final-score" style="font-size:24px; font-weight:bold;">0</span></p>
         <input type="text" id="player-name" placeholder="なまえをいれてね" maxlength="8">
-        <button onclick="saveScore()">ランキングに登録</button>
+        <button id="save-btn">ランキングに登録</button>
         <button onclick="location.reload()" style="background:#444; color: white;">登録せずに再挑戦</button>
     </div>
 
@@ -80,7 +78,25 @@
         <button onclick="location.reload()">もういちど遊ぶ</button>
     </div>
 
-    <script>
+    <script type="module">
+        // Firebase設定の反映
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4J_zWBM5eI8WtpU8mSk9LY5nZiOjj1BA",
+            authDomain: "my-block-blast-ad0ec.firebaseapp.com",
+            projectId: "my-block-blast-ad0ec",
+            storageBucket: "my-block-blast-ad0ec.firebasestorage.app",
+            messagingSenderId: "261578363804",
+            appId: "1:261578363804:web:2378d6e59673465a332e59",
+            measurementId: "G-3GL8WBHK4R"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- ゲームロジック ---
         const BOARD_SIZE = 8;
         const CELL_SIZE = 45;
         const GAP = 4;
@@ -94,7 +110,7 @@
             [[1, 1, 1, 1, 1]],                 
             [[1, 1], [1, 1]],                  
             [[1, 1, 1], [0, 0, 1], [0, 0, 1]], 
-            [[1, 0], [1, 0], [1, 1]] // 3x2 L字
+            [[1, 0], [1, 0], [1, 1]]
         ];
 
         let currentPieces = [];
@@ -111,7 +127,6 @@
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const cell = document.createElement('div');
                     const colorId = board[r][c];
-                    // colorIdが1以上の時、その色のクラスを付与
                     cell.className = 'cell' + (colorId > 0 ? ` color-${colorId}` : '');
                     cell.id = `cell-${r}-${c}`;
                     boardEl.appendChild(cell);
@@ -133,7 +148,7 @@
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
                 let shape = rotatePiece(BASE_PIECES[Math.floor(Math.random() * BASE_PIECES.length)]);
-                const colorId = Math.floor(Math.random() * 7) + 1; // 1〜7のID
+                const colorId = Math.floor(Math.random() * 7) + 1;
                 
                 const pieceWrapper = document.createElement('div');
                 pieceWrapper.style.width = `${shape[0].length * (CELL_SIZE + GAP)}px`;
@@ -265,26 +280,15 @@
         function checkAndClear() {
             let fullRows = [];
             let fullCols = [];
-
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                if (board[r].every(v => v !== 0)) fullRows.push(r);
-            }
+            for (let r = 0; r < BOARD_SIZE; r++) if (board[r].every(v => v !== 0)) fullRows.push(r);
             for (let c = 0; c < BOARD_SIZE; c++) {
                 let isFull = true;
-                for (let r = 0; r < BOARD_SIZE; r++) {
-                    if (board[r][c] === 0) isFull = false;
-                }
+                for (let r = 0; r < BOARD_SIZE; r++) if (board[r][c] === 0) isFull = false;
                 if (isFull) fullCols.push(c);
             }
-
             fullRows.forEach(r => board[r] = Array(BOARD_SIZE).fill(0));
-            fullCols.forEach(c => {
-                for (let r = 0; r < BOARD_SIZE; r++) board[r][c] = 0;
-            });
-
-            if (fullRows.length > 0 || fullCols.length > 0) {
-                score += (fullRows.length + fullCols.length) * 100;
-            }
+            fullCols.forEach(c => { for (let r = 0; r < BOARD_SIZE; r++) board[r][c] = 0; });
+            if (fullRows.length > 0 || fullCols.length > 0) score += (fullRows.length + fullCols.length) * 100;
         }
 
         function checkGameOver() {
@@ -292,9 +296,7 @@
             currentPieces.forEach(p => {
                 if (!p) return;
                 for (let r = 0; r < BOARD_SIZE; r++) {
-                    for (let c = 0; c < BOARD_SIZE; c++) {
-                        if (canPlace(p.shape, r, c)) canMove = true;
-                    }
+                    for (let c = 0; c < BOARD_SIZE; c++) if (canPlace(p.shape, r, c)) canMove = true;
                 }
             });
             if (!canMove && currentPieces.some(p => p !== null)) {
@@ -305,23 +307,51 @@
 
         function updateScore() { document.getElementById('score').innerText = score; }
 
-        function saveScore() {
+        // --- Firebase 通信ロジック ---
+        async function saveScore() {
             const name = document.getElementById('player-name').value || "ななしさん";
-            let ranking = JSON.parse(localStorage.getItem('blockBlastRanking') || "[]");
-            ranking.push({ name, score });
-            ranking.sort((a, b) => b.score - a.score);
-            localStorage.setItem('blockBlastRanking', JSON.stringify(ranking.slice(0, 5)));
-            showRanking();
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerText = "保存中...";
+            
+            try {
+                await addDoc(collection(db, "rankings"), {
+                    name: name,
+                    score: score,
+                    timestamp: new Date()
+                });
+                showRanking();
+            } catch (e) {
+                console.error("Error: ", e);
+                alert("保存に失敗しました。ルールの設定を確認してください。");
+                saveBtn.disabled = false;
+                saveBtn.innerText = "ランキングに登録";
+            }
         }
 
-        function showRanking() {
+        async function showRanking() {
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('ranking-screen').style.display = 'block';
             const list = document.getElementById('ranking-list');
-            const ranking = JSON.parse(localStorage.getItem('blockBlastRanking') || "[]");
-            list.innerHTML = ranking.map((e, i) => `<li><span><span class="rank-num">${i+1}</span>${e.name}</span><span>${e.score}</span></li>`).join('');
+            list.innerHTML = "読み込み中...";
+
+            try {
+                const q = query(collection(db, "rankings"), orderBy("score", "desc"), limit(5));
+                const querySnapshot = await getDocs(q);
+                let html = "";
+                let i = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    html += `<li><span><span class="rank-num">${i}</span>${data.name}</span><span>${data.score}</span></li>`;
+                    i++;
+                });
+                list.innerHTML = html || "データがありません";
+            } catch (e) {
+                list.innerHTML = "エラーが発生しました";
+            }
         }
 
+        document.getElementById('save-btn').onclick = saveScore;
         init();
     </script>
 </body>
