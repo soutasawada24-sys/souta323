@@ -3,116 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Coral Connection - Nightmare Sea</title>
+    <title>Coral Ocean - Underwater Puzzle</title>
     <style>
         :root { 
-            --bg: #001a33; 
-            --board: rgba(0, 40, 80, 0.6); 
-            --red: #ff5e78; --blue: #33ccff; --yellow: #ffd933; 
-            --accent: #7df9ff; 
-            --black-coral: #1a1a1a; /* 黒いサンゴの色 */
+            --sea-bg: #004d80; 
+            --sand: #c2b280;
+            --red-coral: #ff6b6b; --blue-coral: #4facfe; --yellow-coral: #feca57; 
+            --accent: #00d4ff; 
+            --black-coral: #2d3436;
         }
         * { box-sizing: border-box; }
         body { 
             display: flex; flex-direction: column; align-items: center; 
-            background: radial-gradient(circle at center, #003366 0%, #000b1a 100%);
-            color: white; font-family: 'Helvetica Neue', Arial, sans-serif; 
+            /* 海底の背景：上が深く、下が砂地 */
+            background: linear-gradient(to bottom, #001a33 0%, #004d80 70%, var(--sand) 100%);
+            color: white; font-family: 'Arial', sans-serif; 
             overflow: hidden; margin: 0; height: 100vh; justify-content: center; 
             user-select: none; touch-action: none;
         }
-        
-        #score-board { font-size: 28px; margin-bottom: 15px; color: var(--accent); font-weight: bold; text-shadow: 0 0 10px var(--accent); }
+
+        /* 揺れる海草の演出 */
+        .seaweed {
+            position: absolute; bottom: 0; width: 20px; height: 80px;
+            background: rgba(46, 204, 113, 0.6);
+            border-radius: 50% 50% 0 0;
+            animation: wave 3s ease-in-out infinite alternate;
+            transform-origin: bottom; z-index: -1;
+        }
+        @keyframes wave { from { transform: rotate(-10deg); } to { transform: rotate(10deg); } }
+
+        #score-board { font-size: 28px; margin-bottom: 10px; color: white; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
         
         #game-board { 
-            display: grid; grid-template-columns: repeat(8, 40px); grid-template-rows: repeat(8, 40px); 
-            gap: 4px; background: var(--board); padding: 10px; border-radius: 12px; 
-            border: 2px solid rgba(125, 249, 255, 0.3);
+            display: grid; grid-template-columns: repeat(8, 42px); grid-template-rows: repeat(8, 42px); 
+            gap: 2px; background: rgba(0, 0, 0, 0.3); padding: 8px; border-radius: 10px; 
+            border: 4px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(4px);
         }
-        .cell { width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 4px; transition: 0.2s; }
         
-        .color-red { background: var(--red); box-shadow: 0 0 8px var(--red); }
-        .color-blue { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
-        .color-yellow { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
-        /* 黒いサンゴのデザイン */
-        .color-black { background: var(--black-coral); border: 2px solid #333; box-shadow: inset 0 0 10px #000; position: relative; }
-        .color-black::after { content: '×'; position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); color: #444; font-size: 20px; }
+        /* サンゴらしい凹凸のデザイン */
+        .cell { width: 42px; height: 42px; background: rgba(255,255,255,0.1); border-radius: 8px; }
+        .color-red { background: var(--red-coral); border-radius: 12px 5px 15px 8px; box-shadow: inset -4px -4px 8px rgba(0,0,0,0.3), 2px 2px 5px rgba(0,0,0,0.2); }
+        .color-blue { background: var(--blue-coral); border-radius: 5px 15px 8px 12px; box-shadow: inset -4px -4px 8px rgba(0,0,0,0.3), 2px 2px 5px rgba(0,0,0,0.2); }
+        .color-yellow { background: var(--yellow-coral); border-radius: 10px 10px 5px 15px; box-shadow: inset -4px -4px 8px rgba(0,0,0,0.3), 2px 2px 5px rgba(0,0,0,0.2); }
+        .color-black { background: var(--black-coral); border-radius: 4px; border: 2px solid #000; }
         
-        .preview { background: rgba(255,255,255,0.2) !important; }
-        .blast { animation: blast-ani 0.3s ease-out forwards; }
-        @keyframes blast-ani { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+        .preview { background: rgba(255,255,255,0.3) !important; border-radius: 8px; }
 
-        #pieces-container { display: flex; margin-top: 20px; justify-content: space-around; width: 100%; max-width: 400px; height: 110px; }
-        .piece { display: grid; gap: 2px; cursor: grab; transform: scale(0.7); transition: transform 0.2s; }
-        .dragging { position: fixed; z-index: 1000; pointer-events: none; transform: scale(1.0) translateY(-60px); opacity: 0.8; }
-        .p-block { width: 30px; height: 30px; border-radius: 4px; }
-        .p-empty { width: 30px; height: 30px; }
+        #pieces-container { 
+            display: flex; margin-top: 20px; justify-content: space-around; 
+            width: 100%; max-width: 450px; height: 130px; align-items: center;
+        }
+        /* ピースの各ブロックを隙間なく表示 */
+        .piece { display: grid; cursor: grab; transform: scale(0.7); }
+        .dragging { position: fixed; z-index: 1000; pointer-events: none; transform: scale(1.0); filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5)); }
+        .p-block { width: 40px; height: 40px; margin: 1px; }
 
-        #game-over, #ranking-screen { 
+        #game-over { 
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0, 15, 30, 0.98); padding: 30px; border-radius: 20px; text-align: center;
-            border: 2px solid var(--accent); z-index: 2000; width: 320px;
+            background: rgba(0, 30, 60, 0.95); padding: 30px; border-radius: 20px; text-align: center;
+            border: 3px solid var(--accent); z-index: 2000; width: 300px;
         }
-        input { padding: 12px; width: 100%; border-radius: 8px; margin-bottom: 10px; background: #002b4d; color: white; border: 1px solid var(--accent); text-align: center; }
-        button { background: var(--accent); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; color: #001a33; margin-top: 5px; }
-        #ranking-list { text-align: left; margin: 15px 0; list-style: none; padding: 0; }
-        #ranking-list li { padding: 8px 0; border-bottom: 1px solid rgba(125,249,255,0.1); display: flex; justify-content: space-between; }
+        button { background: var(--accent); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div id="score-board">SCORE: <span id="score">0</span></div>
+    <div id="score-board">CORAL: <span id="score">0</span></div>
     <div id="game-board"></div>
     <div id="pieces-container"></div>
 
-    <div id="game-over">
-        <h2 style="color: var(--red);">GAME OVER</h2>
-        <p>スコア: <span id="final-score" style="font-size:24px;">0</span></p>
-        <input type="text" id="player-name" placeholder="なまえ" maxlength="8">
-        <button id="save-btn">ランキングに保存</button>
-        <button onclick="location.reload()" style="background:#444; color:white;">やり直す</button>
-    </div>
+    <!-- 海草をランダムに配置 -->
+    <div class="seaweed" style="left: 10%; height: 60px; animation-delay: 0s;"></div>
+    <div class="seaweed" style="left: 25%; height: 90px; animation-delay: 1s;"></div>
+    <div class="seaweed" style="right: 15%; height: 70px; animation-delay: 0.5s;"></div>
+    <div class="seaweed" style="right: 5%; height: 50px; animation-delay: 1.5s;"></div>
 
-    <div id="ranking-screen">
-        <h2 style="color: var(--accent);">TOP SCORES</h2>
-        <ul id="ranking-list"></ul>
-        <button onclick="location.reload()">もう一度</button>
+    <div id="game-over">
+        <h2 style="color: var(--accent);">海がいっぱいです</h2>
+        <p>最終スコア: <span id="final-score">0</span></p>
+        <button onclick="location.reload()">もういちど遊ぶ</button>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyA4J_zWBM5eI8WtpU8mSk9LY5nZiOjj1BA",
-            authDomain: "my-block-blast-ad0ec.firebaseapp.com",
-            projectId: "my-block-blast-ad0ec",
-            storageBucket: "my-block-blast-ad0ec.firebasestorage.app",
-            messagingSenderId: "261578363804",
-            appId: "1:261578363804:web:2378d6e59673465a332e59"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
         const SIZE = 8;
         let board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
         let score = 0;
+        let turnCounter = 0;
         let currentPieces = [null, null, null];
 
         const COLORS = ['red', 'blue', 'yellow'];
-        // 指定された特殊形状を定義
         const SHAPES = [
-            [[0,1,0],[1,1,1]], // T字
-            [[1,1,0],[0,1,1]], // S字
-            [[0,1,0],[1,1,1],[0,1,0]], // 十字
-            [[1,1,1]],         // 1x3
-            [[1,1,1,1]],       // 1x4
-            [[1,1,1,1,1]],     // 1x5
-            [[1,1],[1,1]],     // 2x2
-            [[1,1],[1,0]],     // L字
+            [[1, 1], [1, 1]], [[1, 1, 1]], [[1, 1], [1, 0]], 
+            [[0, 1, 0], [1, 1, 1]], [[0, 1, 1], [1, 1, 0]], // S字
+            [[1, 1, 1, 1]], [[1, 1, 1, 1, 1]], // 長い
+            [[0, 1, 0], [1, 1, 1], [0, 1, 0]]  // 十字
         ];
 
         function init() {
             const boardEl = document.getElementById('game-board');
-            boardEl.innerHTML = '';
             for (let r = 0; r < SIZE; r++) {
                 for (let c = 0; c < SIZE; c++) {
                     const cell = document.createElement('div');
@@ -125,10 +112,10 @@
         }
 
         function spawnPieces() {
-            // 黒いサンゴの追加（スコアに応じて数が増える）
-            if (score > 0) {
-                const count = Math.min(4, Math.floor(score / 2000) + 1); 
-                for(let i=0; i<count; i++) addBlackCoral();
+            // 3ターン(9個配置)ごとに黒いサンゴ出現
+            if (turnCounter >= 3) {
+                addBlackCoral();
+                turnCounter = 0;
             }
 
             const container = document.getElementById('pieces-container');
@@ -138,14 +125,16 @@
                 const color = COLORS[Math.floor(Math.random() * COLORS.length)];
                 const pieceEl = document.createElement('div');
                 pieceEl.className = 'piece';
-                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, 30px)`;
+                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, 42px)`;
+                
                 shape.forEach(row => {
                     row.forEach(val => {
                         const b = document.createElement('div');
-                        b.className = val ? `p-block color-${color}` : 'p-empty';
+                        b.className = val ? `p-block color-${color}` : '';
                         pieceEl.appendChild(b);
                     });
                 });
+                
                 addDragListeners(pieceEl, shape, color, i);
                 container.appendChild(pieceEl);
                 currentPieces[i] = { shape, color };
@@ -154,14 +143,14 @@
         }
 
         function addBlackCoral() {
-            let emptyCells = [];
+            let empties = [];
             for(let r=0; r<SIZE; r++) {
-                for(let c=0; c<SIZE; c++) if(!board[r][c]) emptyCells.push({r,c});
+                for(let c=0; c<SIZE; c++) if(!board[r][c]) empties.push({r,c});
             }
-            if(emptyCells.length > 5) {
-                const target = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-                board[target.r][target.c] = 'black';
-                document.getElementById(`cell-${target.r}-${target.c}`).className = 'cell color-black';
+            if(empties.length > 10) {
+                const p = empties[Math.floor(Math.random() * empties.length)];
+                board[p.r][p.c] = 'black';
+                document.getElementById(`cell-${p.r}-${p.c}`).className = 'cell color-black';
             }
         }
 
@@ -172,62 +161,14 @@
             return res;
         }
 
-        function checkConnections() {
-            let toRemove = new Set();
-            COLORS.forEach(color => {
-                // 上から下（垂直）
-                let vVisited = Array(SIZE).fill().map(() => Array(SIZE).fill(false));
-                for(let c=0; c<SIZE; c++) {
-                    if(board[0][c] === color && !vVisited[0][c]) {
-                        let cluster = [];
-                        bfs(0, c, color, vVisited, cluster);
-                        if(cluster.some(p => p.r === SIZE-1)) cluster.forEach(p => toRemove.add(`${p.r},${p.c}`));
-                    }
-                }
-                // 左から右（水平）
-                let hVisited = Array(SIZE).fill().map(() => Array(SIZE).fill(false));
-                for(let r=0; r<SIZE; r++) {
-                    if(board[r][0] === color && !hVisited[r][0]) {
-                        let cluster = [];
-                        bfs(r, 0, color, hVisited, cluster);
-                        if(cluster.some(p => p.c === SIZE-1)) cluster.forEach(p => toRemove.add(`${p.r},${p.c}`));
-                    }
-                }
-            });
-
-            if (toRemove.size > 0) {
-                toRemove.forEach(pos => {
-                    const [r, c] = pos.split(',').map(Number);
-                    const cell = document.getElementById(`cell-${r}-${c}`);
-                    cell.classList.add('blast');
-                    board[r][c] = null;
-                    setTimeout(() => { cell.className = 'cell'; }, 300);
-                });
-                score += toRemove.size * 100;
-                updateScore();
-            }
-        }
-
-        function bfs(r, c, color, visited, cluster) {
-            let queue = [{r, c}];
-            visited[r][c] = true;
-            let i = 0;
-            while(i < queue.length) {
-                let curr = queue[i++];
-                cluster.push(curr);
-                [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dr, dc]) => {
-                    let nr = curr.r+dr, nc = curr.c+dc;
-                    if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && !visited[nr][nc] && board[nr][nc] === color) {
-                        visited[nr][nc] = true;
-                        queue.push({r: nr, c: nc});
-                    }
-                });
-            }
-        }
-
         function addDragListeners(el, shape, color, index) {
             const start = (e) => {
                 const touch = e.touches ? e.touches[0] : e;
+                const rect = el.getBoundingClientRect();
+                // ピースの中央を持つように計算
+                const offsetX = (shape[0].length * 42 * 0.7) / 2;
+                const offsetY = (shape.length * 42 * 0.7) / 2;
+
                 const clone = el.cloneNode(true);
                 clone.classList.add('dragging');
                 document.body.appendChild(clone);
@@ -235,20 +176,23 @@
 
                 const move = (ev) => {
                     const t = ev.touches ? ev.touches[0] : ev;
-                    clone.style.left = (t.clientX - 15) + 'px';
-                    clone.style.top = (t.clientY - 15) + 'px';
-                    updatePreview(t.clientX, t.clientY - 60, shape);
+                    clone.style.left = (t.clientX - offsetX) + 'px';
+                    // 指の上に表示するため、さらにyを-80ずらす
+                    clone.style.top = (t.clientY - offsetY - 80) + 'px';
+                    updatePreview(t.clientX, t.clientY - 80, shape);
                 };
 
                 const end = (ev) => {
                     const t = ev.changedTouches ? ev.changedTouches[0] : ev;
-                    const pos = getBoardPos(t.clientX, t.clientY - 60);
+                    const pos = getBoardPos(t.clientX, t.clientY - 80);
                     if (pos && canPlace(shape, pos.r, pos.c)) {
                         placePiece(shape, pos.r, pos.c, color);
                         currentPieces[index] = null;
                         clone.remove();
-                        if (currentPieces.every(p => p === null)) spawnPieces();
-                        else if(!checkAnyMovePossible()) finishGame();
+                        if (currentPieces.every(p => p === null)) {
+                            turnCounter++;
+                            spawnPieces();
+                        } else if(!checkAnyMovePossible()) finishGame();
                     } else {
                         el.style.visibility = 'visible';
                         clone.remove();
@@ -270,8 +214,8 @@
 
         function getBoardPos(x, y) {
             const rect = document.getElementById('game-board').getBoundingClientRect();
-            const c = Math.floor((x - rect.left - 10) / 44);
-            const r = Math.floor((y - rect.top - 10) / 44);
+            const c = Math.floor((x - rect.left - 8) / 44);
+            const r = Math.floor((y - rect.top - 8) / 44);
             if (r >= 0 && r < SIZE && c >= 0 && c < SIZE) return {r, c};
             return null;
         }
@@ -301,6 +245,58 @@
             updateScore();
         }
 
+        function checkConnections() {
+            let toRemove = new Set();
+            COLORS.forEach(color => {
+                let vVisited = Array(SIZE).fill().map(() => Array(SIZE).fill(false));
+                for(let c=0; c<SIZE; c++) {
+                    if(board[0][c] === color && !vVisited[0][c]) {
+                        let cluster = [];
+                        bfs(0, c, color, vVisited, cluster);
+                        if(cluster.some(p => p.r === SIZE-1)) cluster.forEach(p => toRemove.add(`${p.r},${p.c}`));
+                    }
+                }
+                let hVisited = Array(SIZE).fill().map(() => Array(SIZE).fill(false));
+                for(let r=0; r<SIZE; r++) {
+                    if(board[r][0] === color && !hVisited[r][0]) {
+                        let cluster = [];
+                        bfs(r, 0, color, hVisited, cluster);
+                        if(cluster.some(p => p.c === SIZE-1)) cluster.forEach(p => toRemove.add(`${p.r},${p.c}`));
+                    }
+                }
+            });
+
+            if (toRemove.size > 0) {
+                toRemove.forEach(pos => {
+                    const [r, c] = pos.split(',').map(Number);
+                    const cell = document.getElementById(`cell-${r}-${c}`);
+                    cell.style.transform = 'scale(0)';
+                    cell.style.transition = '0.3s';
+                    board[r][c] = null;
+                    setTimeout(() => { 
+                        cell.className = 'cell'; 
+                        cell.style.transform = 'scale(1)';
+                    }, 300);
+                });
+                score += toRemove.size * 100;
+                updateScore();
+            }
+        }
+
+        function bfs(r, c, color, visited, cluster) {
+            let q = [{r, c}]; visited[r][c] = true;
+            let i = 0;
+            while(i < q.length) {
+                let curr = q[i++]; cluster.push(curr);
+                [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dr, dc]) => {
+                    let nr = curr.r+dr, nc = curr.c+dc;
+                    if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && !visited[nr][nc] && board[nr][nc] === color) {
+                        visited[nr][nc] = true; q.push({r: nr, c: nc});
+                    }
+                });
+            }
+        }
+
         function updatePreview(x, y, shape) {
             clearPreview();
             const pos = getBoardPos(x, y);
@@ -315,7 +311,6 @@
 
         function clearPreview() { document.querySelectorAll('.cell').forEach(c => c.classList.remove('preview')); }
         function updateScore() { document.getElementById('score').innerText = score; }
-        
         function checkAnyMovePossible() {
             return currentPieces.some(p => {
                 if(!p) return false;
@@ -325,35 +320,11 @@
                 return false;
             });
         }
-
         function finishGame() {
             document.getElementById('game-over').style.display = 'block';
             document.getElementById('final-score').innerText = score;
         }
 
-        async function saveScore() {
-            const name = document.getElementById('player-name').value || "ななし";
-            try {
-                await addDoc(collection(db, "coral_hard_mode"), { name, score, timestamp: new Date() });
-                showRanking();
-            } catch (e) { alert("保存失敗"); }
-        }
-
-        async function showRanking() {
-            document.getElementById('game-over').style.display = 'none';
-            document.getElementById('ranking-screen').style.display = 'block';
-            const list = document.getElementById('ranking-list');
-            list.innerHTML = "ロード中...";
-            const q = query(collection(db, "coral_hard_mode"), orderBy("score", "desc"), limit(5));
-            const snap = await getDocs(q);
-            list.innerHTML = "";
-            snap.forEach((doc, i) => {
-                const d = doc.data();
-                list.innerHTML += `<li><span>${i+1}. ${d.name}</span><span>${d.score}</span></li>`;
-            });
-        }
-
-        document.getElementById('save-btn').onclick = saveScore;
         init();
     </script>
 </body>
