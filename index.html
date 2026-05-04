@@ -3,69 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Coral Connection - Blast Edition</title>
+    <title>Coral Connection - Deep Sea Edition</title>
     <style>
-        :root { --bg: #000b1a; --board: #001f3f; --red: #ff4757; --blue: #1e90ff; --yellow: #ffa502; }
+        :root { 
+            --sea-dark: #001a33; 
+            --sea-mid: #004d80;
+            --sea-light: #00d4ff;
+            --red: #ff4d4d; --blue: #3399ff; --yellow: #ffcc00; 
+        }
         * { box-sizing: border-box; }
         body { 
             display: flex; flex-direction: column; align-items: center; 
-            background: var(--bg); color: white; font-family: 'Arial', sans-serif; 
+            background: radial-gradient(circle at center, var(--sea-mid) 0%, var(--sea-dark) 100%);
+            color: white; font-family: 'Helvetica Neue', Arial, sans-serif; 
             overflow: hidden; margin: 0; height: 100vh; justify-content: center; 
             user-select: none; touch-action: none;
         }
-        #score-board { font-size: 24px; margin-bottom: 5px; color: #00d4ff; font-weight: bold; }
+        /* 波の背景演出 */
+        body::before {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://www.transparenttextures.com/patterns/cubes.png');
+            opacity: 0.1; z-index: -1;
+        }
+
+        #score-board { font-size: 28px; margin-bottom: 10px; color: var(--sea-light); font-weight: bold; text-shadow: 0 0 10px rgba(0,212,255,0.5); }
         
         #game-board { 
-            display: grid; grid-template-columns: repeat(12, 28px); grid-template-rows: repeat(12, 28px); 
-            gap: 2px; background: var(--board); padding: 8px; border-radius: 10px; border: 3px solid #004080;
+            display: grid; grid-template-columns: repeat(8, 40px); grid-template-rows: repeat(8, 40px); 
+            gap: 4px; background: rgba(0, 31, 63, 0.7); padding: 12px; border-radius: 15px; 
+            border: 4px solid var(--sea-light); box-shadow: 0 0 30px rgba(0,212,255,0.3);
+            backdrop-filter: blur(5px);
         }
-        .cell { width: 28px; height: 28px; background: rgba(255,255,255,0.05); border-radius: 3px; transition: background 0.1s; }
+        .cell { width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 6px; transition: 0.2s; }
         
-        .color-red { background: var(--red); box-shadow: 0 0 10px var(--red); }
-        .color-blue { background: var(--blue); box-shadow: 0 0 10px var(--blue); }
-        .color-yellow { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
-        .preview { background: rgba(255,255,255,0.3) !important; }
+        .color-red { background: var(--red); box-shadow: 0 0 15px var(--red); border: 1px solid rgba(255,255,255,0.3); }
+        .color-blue { background: var(--blue); box-shadow: 0 0 15px var(--blue); border: 1px solid rgba(255,255,255,0.3); }
+        .color-yellow { background: var(--yellow); box-shadow: 0 0 15px var(--yellow); border: 1px solid rgba(255,255,255,0.3); }
+        .preview { background: rgba(255,255,255,0.4) !important; }
 
-        /* 爆発エフェクト */
-        .blast { animation: blast-ani 0.4s ease-out; }
+        .blast { animation: blast-ani 0.5s cubic-bezier(0.11, 0, 0.5, 0) forwards; }
         @keyframes blast-ani {
-            0% { transform: scale(1); background: white; filter: brightness(2); }
-            100% { transform: scale(0); background: transparent; }
+            0% { transform: scale(1); background: #fff; box-shadow: 0 0 30px #fff; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
         }
 
         #pieces-container { 
-            display: flex; margin-top: 15px; justify-content: space-around; 
-            align-items: center; width: 100%; max-width: 500px; height: 120px;
+            display: flex; margin-top: 20px; justify-content: space-around; 
+            align-items: center; width: 100%; max-width: 450px; height: 140px;
+            background: rgba(0,0,0,0.2); border-radius: 20px;
         }
-        .piece { display: grid; gap: 2px; cursor: grab; transform: scale(0.7); }
-        .dragging { position: fixed; z-index: 1000; pointer-events: none; transform: scale(1.0) translateY(-50px); opacity: 0.9; }
-        .p-block { width: 28px; height: 28px; border-radius: 3px; }
-        .p-empty { width: 28px; height: 28px; }
+        .piece { display: grid; gap: 3px; cursor: grab; transform: scale(0.8); }
+        .dragging { position: fixed; z-index: 1000; pointer-events: none; transform: scale(1.1) translateY(-60px); opacity: 0.9; }
+        .p-block { width: 35px; height: 35px; border-radius: 5px; }
+        .p-empty { width: 35px; height: 35px; }
 
-        #game-over { 
+        #game-over, #ranking-screen { 
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.95); padding: 30px; border-radius: 20px; text-align: center;
-            border: 2px solid #00d4ff; z-index: 2000;
+            background: rgba(0, 20, 40, 0.95); padding: 30px; border-radius: 25px; text-align: center;
+            border: 4px solid var(--sea-light); z-index: 2000; width: 300px;
         }
-        button { background: #00d4ff; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; color: #000; }
+        input { padding: 12px; width: 100%; border-radius: 10px; border: none; margin: 15px 0; background: #002b4d; color: white; border: 1px solid var(--sea-light); }
+        button { background: var(--sea-light); border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; color: #001a33; }
+        #ranking-list { text-align: left; padding: 0; list-style: none; }
+        #ranking-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(0,212,255,0.2); }
     </style>
 </head>
 <body>
-    <div id="score-board">SCORE: <span id="score">0</span></div>
+    <div id="score-board">CORAL: <span id="score">0</span></div>
     <div id="game-board"></div>
     <div id="pieces-container"></div>
 
     <div id="game-over">
-        <h2 style="color: #00d4ff;">海が埋まりました</h2>
-        <p>SCORE: <span id="final-score">0</span></p>
-        <button onclick="location.reload()">RETRY</button>
+        <h2 style="color: var(--sea-light);">海が満杯です</h2>
+        <p>SCORE: <span id="final-score" style="font-size:24px;">0</span></p>
+        <input type="text" id="player-name" placeholder="名前を入力" maxlength="8">
+        <button id="save-btn">記録を送信</button>
+        <button onclick="location.reload()" style="background:#444; color:white;">やり直す</button>
+    </div>
+
+    <div id="ranking-screen">
+        <h2 style="color: var(--sea-light);">TOP EXPLORERS</h2>
+        <ul id="ranking-list"></ul>
+        <button onclick="location.reload()">再挑戦</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Firebase設定（維持）
         const firebaseConfig = {
             apiKey: "AIzaSyA4J_zWBM5eI8WtpU8mSk9LY5nZiOjj1BA",
             authDomain: "my-block-blast-ad0ec.firebaseapp.com",
@@ -77,18 +103,16 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const SIZE = 12;
+        const SIZE = 8;
         let board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
         let score = 0;
         let currentPieces = [];
 
         const COLORS = ['red', 'blue', 'yellow'];
         const SHAPES = [
-            [[1, 1], [1, 0]], // L
-            [[0, 1, 0], [1, 1, 1], [0, 1, 0]], // 十字
-            [[1, 1, 1]], [[1, 1, 1, 1]], [[1, 1, 1, 1, 1]], // 棒
-            [[0, 1, 1], [1, 1, 0]], // S
-            [[1, 1, 1], [0, 1, 0]]  // T
+            [[1, 1], [1, 0]], [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+            [[1, 1, 1]], [[1, 1, 1, 1]], [[1, 1, 1, 1, 1]],
+            [[0, 1, 1], [1, 1, 0]], [[1, 1, 1], [0, 1, 0]]
         ];
 
         function init() {
@@ -105,22 +129,15 @@
             spawnPieces();
         }
 
-        function rotate(matrix) {
-            const n = Math.floor(Math.random() * 4);
-            let res = matrix;
-            for(let i=0; i<n; i++) res = res[0].map((_, ci) => res.map(row => row[ci]).reverse());
-            return res;
-        }
-
         function spawnPieces() {
             const container = document.getElementById('pieces-container');
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
-                const shape = rotate(SHAPES[Math.floor(Math.random() * SHAPES.length)]);
+                const shape = rotateMatrix(SHAPES[Math.floor(Math.random() * SHAPES.length)]);
                 const color = COLORS[Math.floor(Math.random() * COLORS.length)];
                 const pieceEl = document.createElement('div');
                 pieceEl.className = 'piece';
-                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, 28px)`;
+                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, 35px)`;
                 shape.forEach(row => {
                     row.forEach(val => {
                         const b = document.createElement('div');
@@ -132,74 +149,63 @@
                 container.appendChild(pieceEl);
                 currentPieces[i] = { shape, color };
             }
-            if(!checkAnyMovePossible()) showGameOver();
-        }
-
-        function placePiece(shape, r, c, color) {
-            shape.forEach((row, ri) => {
-                row.forEach((val, ci) => {
-                    if (val) {
-                        board[r + ri][c + ci] = color;
-                        document.getElementById(`cell-${r + ri}-${c + ci}`).className = `cell color-${color}`;
-                    }
-                });
-            });
-            score += 10;
-            checkConnections();
-            updateScore();
+            if(!checkAnyMovePossible()) finishGame();
         }
 
         function checkConnections() {
             let coreToRemove = new Set();
 
             COLORS.forEach(color => {
-                // 縦の接続チェック (Top to Bottom)
-                let visitedV = Array(SIZE).fill().map(() => Array(SIZE).fill(false));
-                for(let c=0; c<SIZE; c++) {
-                    if(board[0][c] === color && !visitedV[0][c]) {
-                        let cluster = [];
-                        bfs(0, c, color, visitedV, cluster);
-                        if(cluster.some(p => p.r === SIZE-1)) cluster.forEach(p => coreToRemove.add(`${p.r},${p.c}`));
-                    }
-                }
-                // 横の接続チェック (Left to Right)
-                let visitedH = Array(SIZE).fill().map(() => Array(SIZE).fill(false));
+                let visited = Array(SIZE).fill().map(() => Array(SIZE).fill(false));
+                
                 for(let r=0; r<SIZE; r++) {
-                    if(board[r][0] === color && !visitedH[r][0]) {
-                        let cluster = [];
-                        bfs(r, 0, color, visitedH, cluster);
-                        if(cluster.some(p => p.c === SIZE-1)) cluster.forEach(p => coreToRemove.add(`${p.r},${p.c}`));
+                    for(let c=0; c<SIZE; c++) {
+                        if(board[r][c] === color && !visited[r][c]) {
+                            let cluster = [];
+                            bfs(r, c, color, visited, cluster);
+                            
+                            // 接続されている「辺」を判定
+                            let edges = new Set();
+                            cluster.forEach(p => {
+                                if(p.r === 0) edges.add('top');
+                                if(p.r === SIZE-1) edges.add('bottom');
+                                if(p.c === 0) edges.add('left');
+                                if(p.c === SIZE-1) edges.add('right');
+                            });
+
+                            // 2つ以上の異なる辺に触れていれば接続成立（例：上と右、左と下など）
+                            if(edges.size >= 2) {
+                                cluster.forEach(p => coreToRemove.add(`${p.r},${p.c}`));
+                            }
+                        }
                     }
                 }
             });
 
             if (coreToRemove.size > 0) {
                 let finalToRemove = new Set(coreToRemove);
-                
-                // 【新ルール】消えるブロックに隣接する全てのブロック（同色・別色問わず）を巻き込む
+                // 隣接爆発
                 coreToRemove.forEach(pos => {
                     const [r, c] = pos.split(',').map(Number);
-                    [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([dr, dc]) => {
-                        let nr = r + dr, nc = c + dc;
-                        if(nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc]) {
-                            finalToRemove.add(`${nr},${nc}`);
+                    for(let dr=-1; dr<=1; dr++) {
+                        for(let dc=-1; dc<=1; dc++) {
+                            let nr = r+dr, nc = c+dc;
+                            if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && board[nr][nc]) {
+                                finalToRemove.add(`${nr},${nc}`);
+                            }
                         }
-                    });
+                    }
                 });
 
-                // アニメーションと削除
                 finalToRemove.forEach(pos => {
                     const [r, c] = pos.split(',').map(Number);
                     const cell = document.getElementById(`cell-${r}-${c}`);
                     cell.classList.add('blast');
                     board[r][c] = null;
-                    setTimeout(() => {
-                        cell.className = 'cell';
-                        cell.classList.remove('blast');
-                    }, 400);
+                    setTimeout(() => { cell.className = 'cell'; cell.classList.remove('blast'); }, 500);
                 });
-
-                score += finalToRemove.size * 20;
+                score += finalToRemove.size * 100;
+                updateScore();
             }
         }
 
@@ -220,6 +226,13 @@
             }
         }
 
+        function rotateMatrix(matrix) {
+            let n = Math.floor(Math.random() * 4);
+            let res = matrix;
+            for(let i=0; i<n; i++) res = res[0].map((_, ci) => res.map(row => row[ci]).reverse());
+            return res;
+        }
+
         function addDragListeners(el, shape, color, index) {
             const start = (e) => {
                 e.preventDefault();
@@ -236,18 +249,18 @@
                     const t = ev.touches ? ev.touches[0] : ev;
                     clone.style.left = (t.clientX - offsetX) + 'px';
                     clone.style.top = (t.clientY - offsetY) + 'px';
-                    updatePreview(t.clientX - offsetX, t.clientY - offsetY - 50, shape);
+                    updatePreview(t.clientX - offsetX, t.clientY - offsetY - 60, shape);
                 };
 
                 const end = (ev) => {
                     const t = ev.changedTouches ? ev.changedTouches[0] : ev;
-                    const pos = getBoardPos(t.clientX - offsetX, t.clientY - offsetY - 50);
+                    const pos = getBoardPos(t.clientX - offsetX, t.clientY - offsetY - 60);
                     if (pos && canPlace(shape, pos.r, pos.c)) {
                         placePiece(shape, pos.r, pos.c, color);
                         currentPieces[index] = null;
                         clone.remove();
                         if (currentPieces.every(p => p === null)) spawnPieces();
-                        else if(!checkAnyMovePossible()) showGameOver();
+                        else if(!checkAnyMovePossible()) finishGame();
                     } else {
                         el.style.visibility = 'visible';
                         clone.remove();
@@ -269,8 +282,8 @@
 
         function getBoardPos(x, y) {
             const rect = document.getElementById('game-board').getBoundingClientRect();
-            const c = Math.round((x - rect.left - 8) / 30);
-            const r = Math.round((y - rect.top - 8) / 30);
+            const c = Math.round((x - rect.left - 12) / 44);
+            const r = Math.round((y - rect.top - 12) / 44);
             if (r >= 0 && r < SIZE && c >= 0 && c < SIZE) return {r, c};
             return null;
         }
@@ -284,6 +297,20 @@
                 }
             }
             return true;
+        }
+
+        function placePiece(shape, r, c, color) {
+            shape.forEach((row, ri) => {
+                row.forEach((val, ci) => {
+                    if (val) {
+                        board[r + ri][c + ci] = color;
+                        document.getElementById(`cell-${r + ri}-${c + ci}`).className = `cell color-${color}`;
+                    }
+                });
+            });
+            score += 10;
+            checkConnections();
+            updateScore();
         }
 
         function updatePreview(x, y, shape) {
@@ -311,11 +338,36 @@
             });
         }
 
-        function showGameOver() {
+        function finishGame() {
             document.getElementById('game-over').style.display = 'block';
             document.getElementById('final-score').innerText = score;
         }
 
+        async function saveScore() {
+            const name = document.getElementById('player-name').value || "潜水員";
+            try {
+                await addDoc(collection(db, "coral_rankings_v2"), {
+                    name, score, timestamp: new Date()
+                });
+                showRanking();
+            } catch (e) { alert("送信エラー"); }
+        }
+
+        async function showRanking() {
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('ranking-screen').style.display = 'block';
+            const list = document.getElementById('ranking-list');
+            list.innerHTML = "Loading...";
+            const q = query(collection(db, "coral_rankings_v2"), orderBy("score", "desc"), limit(5));
+            const snap = await getDocs(q);
+            list.innerHTML = "";
+            snap.forEach((doc, i) => {
+                const d = doc.data();
+                list.innerHTML += `<li><span>${i+1}. ${d.name}</span><span>${d.score}</span></li>`;
+            });
+        }
+
+        document.getElementById('save-btn').onclick = saveScore;
         init();
     </script>
 </body>
