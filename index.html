@@ -3,94 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Block Blast - Balanced Edition</title>
+    <title>Coral Grow - Deep Sea Puzzle</title>
     <style>
+        :root {
+            --bg-color: #001a33;
+            --board-color: #002b4d;
+            --accent-color: #00d4ff;
+        }
         * { box-sizing: border-box; }
         body { 
             display: flex; flex-direction: column; align-items: center; 
-            background: #121212; color: white; font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg-color); color: white; font-family: 'Verdana', sans-serif; 
             overflow: hidden; margin: 0; height: 100vh; justify-content: center; 
             user-select: none; touch-action: none;
         }
-        #score-board { font-size: clamp(24px, 5vh, 36px); margin-bottom: 10px; color: #00d4ff; font-weight: bold; }
+        #score-board { font-size: 28px; margin-bottom: 10px; color: var(--accent-color); text-shadow: 0 0 10px rgba(0,212,255,0.5); }
         
         #game-board { 
             display: grid; grid-template-columns: repeat(8, 45px); grid-template-rows: repeat(8, 45px); 
-            gap: 4px; background: #2a2a2a; padding: 12px; border-radius: 12px; border: 4px solid #333;
-            position: relative;
+            gap: 4px; background: var(--board-color); padding: 12px; border-radius: 20px; 
+            border: 4px solid #004080; position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.5);
         }
-        .cell { width: 45px; height: 45px; background: #1a1a1a; border-radius: 4px; }
+        .cell { 
+            width: 45px; height: 45px; background: rgba(255,255,255,0.05); 
+            border-radius: 50% 50% 10% 10%; transition: all 0.3s ease;
+        }
         
-        .color-1 { background: #ff4757; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
-        .color-2 { background: #1e90ff; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
-        .color-3 { background: #2ed573; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
-        .color-4 { background: #ffa502; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
-        .color-5 { background: #eccc68; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
-        .color-6 { background: #a29bfe; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
-        .color-7 { background: #ff6b81; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
+        /* サンゴのレベル別表現（色の深み） */
+        .coral-1 { background: #ff7f50; box-shadow: 0 0 5px #ff7f50; transform: scale(0.8); }
+        .coral-2 { background: #ff4500; box-shadow: 0 0 10px #ff4500; transform: scale(0.9); }
+        .coral-3 { background: #dc143c; box-shadow: 0 0 15px #dc143c; transform: scale(1.0); border: 2px solid white; }
         
-        .cell.preview { background: rgba(255, 255, 255, 0.15); }
+        .blue-1 { background: #7fffd4; box-shadow: 0 0 5px #7fffd4; transform: scale(0.8); }
+        .blue-2 { background: #00ced1; box-shadow: 0 0 10px #00ced1; transform: scale(0.9); }
+        .blue-3 { background: #008b8b; box-shadow: 0 0 15px #008b8b; transform: scale(1.0); border: 2px solid white; }
+
+        .purple-1 { background: #e0b0ff; box-shadow: 0 0 5px #e0b0ff; transform: scale(0.8); }
+        .purple-2 { background: #9370db; box-shadow: 0 0 10px #9370db; transform: scale(0.9); }
+        .purple-3 { background: #4b0082; box-shadow: 0 0 15px #4b0082; transform: scale(1.0); border: 2px solid white; }
+
+        .cell.preview { background: rgba(0, 212, 255, 0.3); border-radius: 50%; }
 
         #pieces-container { 
             display: flex; margin-top: 20px; justify-content: space-around; 
-            align-items: center; width: 100%; max-width: 500px; height: 160px; 
+            align-items: center; width: 100%; max-width: 500px; height: 140px;
         }
-
-        .piece { display: grid; gap: 4px; cursor: grab; position: relative; z-index: 10; }
-        .dragging { 
-            position: fixed; z-index: 1000; pointer-events: none; 
-            transform: scale(1.1) translateY(-60px); opacity: 0.9;
-        }
+        .piece { display: grid; gap: 4px; cursor: grab; }
+        .dragging { position: fixed; z-index: 1000; pointer-events: none; transform: scale(1.2) translateY(-40px); opacity: 0.8; }
         
-        .p-block { width: 45px; height: 45px; border-radius: 4px; }
-        .p-empty { width: 45px; height: 45px; }
+        .p-block { width: 40px; height: 40px; border-radius: 50%; }
+        .p-empty { width: 40px; height: 40px; }
 
-        /* エフェクト（安定版の負荷に戻しました） */
         .particle {
-            position: absolute; width: 8px; height: 8px; border-radius: 2px;
-            pointer-events: none; z-index: 100; animation: fly 0.5s ease-out forwards;
+            position: absolute; width: 6px; height: 6px; border-radius: 50%;
+            pointer-events: none; z-index: 100; animation: bubble 0.8s ease-out forwards;
         }
-        @keyframes fly {
+        @keyframes bubble {
             0% { transform: translate(0,0) scale(1); opacity: 1; }
             100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
         }
 
-        #game-over, #ranking-screen { 
+        #game-over { 
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(15, 15, 15, 0.98); padding: 30px; border-radius: 20px; text-align: center;
-            border: 3px solid #00d4ff; z-index: 2000; width: 320px;
+            background: rgba(0, 20, 40, 0.95); padding: 30px; border-radius: 20px; text-align: center;
+            border: 3px solid var(--accent-color); z-index: 2000; width: 320px;
         }
-        
-        input { padding: 12px; width: 100%; border-radius: 8px; border: none; margin: 15px 0; font-size: 16px; text-align: center; background: #333; color: white; }
-        button { background: #00d4ff; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 5px; width: 100%; }
-
-        #ranking-list { text-align: left; margin: 15px 0; list-style: none; padding: 0; }
-        #ranking-list li { padding: 10px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
-        .rank-num { color: #00d4ff; font-weight: bold; margin-right: 10px; }
+        button { background: var(--accent-color); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div id="score-board">SCORE: <span id="score">0</span></div>
+    <div id="score-board">CORAL: <span id="score">0</span></div>
     <div id="game-board"></div>
     <div id="pieces-container"></div>
 
     <div id="game-over">
-        <h2 style="color: #ff3333; margin: 0;">GAME OVER</h2>
-        <p>最終スコア: <span id="final-score" style="font-size:24px; font-weight:bold;">0</span></p>
-        <input type="text" id="player-name" placeholder="なまえをいれてね" maxlength="8">
-        <button id="save-btn">ランキングに登録</button>
-        <button onclick="location.reload()" style="background:#444; color: white;">登録せずに再挑戦</button>
-    </div>
-
-    <div id="ranking-screen">
-        <h2 style="color: #00d4ff; margin-top:0;">RANKING</h2>
-        <ul id="ranking-list"></ul>
-        <button onclick="location.reload()">もういちど遊ぶ</button>
+        <h2 style="color: #00d4ff;">海がいっぱいになりました</h2>
+        <p>スコア: <span id="final-score" style="font-size:24px;">0</span></p>
+        <button onclick="location.reload()">もういちど育てる</button>
     </div>
 
     <script type="module">
+        // Firebase設定（ユーザー指定通り維持）
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA4J_zWBM5eI8WtpU8mSk9LY5nZiOjj1BA",
@@ -98,31 +93,22 @@
             projectId: "my-block-blast-ad0ec",
             storageBucket: "my-block-blast-ad0ec.firebasestorage.app",
             messagingSenderId: "261578363804",
-            appId: "1:261578363804:web:2378d6e59673465a332e59",
-            measurementId: "G-3GL8WBHK4R"
+            appId: "1:261578363804:web:2378d6e59673465a332e59"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         const BOARD_SIZE = 8;
         const CELL_SIZE = 45;
         const GAP = 4;
-        let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
+        let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
         let score = 0;
-
-        const BASE_PIECES = [
-            [[1, 1, 1], [1, 1, 1], [1, 1, 1]], 
-            [[1, 1, 1], [1, 1, 1]],           
-            [[1, 1, 1, 1]],                    
-            [[1, 1, 1, 1, 1]],                 
-            [[1, 1], [1, 1]],                  
-            [[1, 1, 1], [0, 0, 1], [0, 0, 1]], 
-            [[1, 0], [1, 0], [1, 1]],
-            [[0, 1, 1], [1, 1, 0]], // S字追加
-        ];
-
         let currentPieces = [];
+
+        const COLORS = ['coral', 'blue', 'purple'];
+        const SHAPES = [
+            [[1, 1]], [[1], [1]], [[1, 1], [1, 0]], [[1]], [[1, 1, 1]]
+        ];
 
         function init() {
             createBoard();
@@ -135,107 +121,129 @@
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const cell = document.createElement('div');
-                    const colorId = board[r][c];
-                    cell.className = 'cell' + (colorId > 0 ? ` color-${colorId}` : '');
+                    const data = board[r][c];
+                    cell.className = 'cell' + (data ? ` ${data.color}-${data.level}` : '');
                     cell.id = `cell-${r}-${c}`;
                     boardEl.appendChild(cell);
                 }
             }
         }
 
-        // --- AI選別システム（さらに緩め設定） ---
-        function getSmartPiece() {
-            let candidates = [];
-            
-            for (let pIdx = 0; pIdx < BASE_PIECES.length; pIdx++) {
-                let base = BASE_PIECES[pIdx];
-                for (let rot = 0; rot < 4; rot++) {
-                    let shape = base;
-                    for(let i=0; i<rot; i++) shape = shape[0].map((_, ci) => shape.map(row => row[ci]).reverse());
-                    
-                    let canBePlaced = false;
-                    for (let r = 0; r < BOARD_SIZE; r++) {
-                        for (let c = 0; c < BOARD_SIZE; c++) {
-                            if (canPlace(shape, r, c)) { canBePlaced = true; break; }
-                        }
-                        if (canBePlaced) break;
-                    }
-                    // 置ける形なら候補リストに入れる
-                    if (canBePlaced) candidates.push(shape);
-                }
-            }
-
-            // 置ける形が全くない場合はランダムな形を返す（詰み判定へ）
-            if (candidates.length === 0) return rotatePiece(BASE_PIECES[Math.floor(Math.random() * BASE_PIECES.length)]);
-
-            // 【調整】半分以上の確率(60%)で完全ランダムにする。
-            // これにより「全消し無双」が難しくなり、ほどよい難易度になります。
-            if (Math.random() < 0.6) {
-                return candidates[Math.floor(Math.random() * candidates.length)];
-            }
-
-            // 残り40%の確率で、ちょっとだけ相性の良いものを選び出す（ゆるい忖度）
-            return candidates[0]; 
-        }
-
-        function rotatePiece(matrix) {
-            const rotations = Math.floor(Math.random() * 4);
-            let result = matrix;
-            for (let r = 0; r < rotations; r++) {
-                result = result[0].map((_, colIndex) => result.map(row => row[colIndex]).reverse());
-            }
-            return result;
-        }
-
         function spawnPieces() {
             const container = document.getElementById('pieces-container');
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
-                let shape = getSmartPiece(); 
-                const colorId = Math.floor(Math.random() * 7) + 1;
-                const pieceWrapper = document.createElement('div');
-                pieceWrapper.style.width = `${shape[0].length * (CELL_SIZE + GAP)}px`;
+                const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+                const color = COLORS[Math.floor(Math.random() * COLORS.length)];
                 const pieceEl = document.createElement('div');
                 pieceEl.className = 'piece';
-                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, ${CELL_SIZE}px)`;
-                shape.forEach((row) => {
-                    row.forEach((val) => {
+                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, 40px)`;
+                shape.forEach(row => {
+                    row.forEach(val => {
                         const b = document.createElement('div');
-                        b.className = val ? `p-block color-${colorId}` : 'p-empty';
+                        b.className = val ? `p-block ${color}-1` : 'p-empty';
                         pieceEl.appendChild(b);
                     });
                 });
-                addDragListeners(pieceEl, shape, i, colorId);
-                pieceWrapper.appendChild(pieceEl);
-                container.appendChild(pieceWrapper);
-                currentPieces[i] = { shape, colorId };
+                addDragListeners(pieceEl, shape, color, i);
+                container.appendChild(pieceEl);
+                currentPieces[i] = { shape, color };
             }
             checkGameOver();
         }
 
-        // エフェクト（安定版）
-        function createParticles(r, c, colorClass) {
-            const cell = document.getElementById(`cell-${r}-${c}`);
-            if(!cell) return;
-            const rect = cell.getBoundingClientRect();
-            const color = getComputedStyle(document.querySelector('.' + colorClass))?.backgroundColor || "#fff";
+        function placePiece(shape, r, c, color) {
+            shape.forEach((row, i) => {
+                row.forEach((val, j) => {
+                    if (val) {
+                        board[r + i][c + j] = { color, level: 1 };
+                        createBubbles(r + i, c + j, color);
+                    }
+                });
+            });
             
-            for (let i = 0; i < 5; i++) {
-                const p = document.createElement('div');
-                p.className = 'particle';
-                p.style.backgroundColor = color;
-                p.style.left = (rect.left + rect.width / 2) + 'px';
-                p.style.top = (rect.top + rect.height / 2) + 'px';
-                const dx = (Math.random() - 0.5) * 80 + 'px';
-                const dy = (Math.random() - 0.5) * 80 + 'px';
-                p.style.setProperty('--dx', dx);
-                p.style.setProperty('--dy', dy);
-                document.body.appendChild(p);
-                setTimeout(() => p.remove(), 500);
+            // 成長と伝染のロジック
+            growCorals();
+            score += 10;
+            updateScore();
+            createBoard();
+            checkSpringTide();
+        }
+
+        function growCorals() {
+            let changed = true;
+            while(changed) {
+                changed = false;
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        if (!board[r][c]) continue;
+                        const current = board[r][c];
+                        
+                        // 隣接チェック
+                        const neighbors = [[0,1],[0,-1],[1,0],[-1,0]];
+                        neighbors.forEach(([dr, dc]) => {
+                            const nr = r + dr, nc = c + dc;
+                            if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && board[nr][nc]) {
+                                const target = board[nr][nc];
+                                // 同じ色ならレベルアップ
+                                if (current.color === target.color && current.level === target.level && current.level < 3) {
+                                    current.level++;
+                                    board[nr][nc] = null;
+                                    changed = true;
+                                    score += 20;
+                                }
+                                // レベルが高いサンゴが隣の別色を飲み込む
+                                if (current.color !== target.color && current.level > target.level) {
+                                    target.color = current.color;
+                                    changed = true;
+                                    score += 5;
+                                }
+                            }
+                        });
+                    }
+                }
             }
         }
 
-        function addDragListeners(el, shape, index, colorId) {
+        function checkSpringTide() {
+            const flat = board.flat().filter(v => v);
+            if (flat.length > 50) { // 盤面がほぼ埋まったら大潮
+                const colorCounts = {};
+                flat.forEach(v => colorCounts[v.color] = (colorCounts[v.color] || 0) + 1);
+                const maxColor = Object.keys(colorCounts).reduce((a, b) => colorCounts[a] > colorCounts[b] ? a : b);
+                
+                // 一番多い色を全消し
+                for(let r=0; r<BOARD_SIZE; r++) {
+                    for(let c=0; c<BOARD_SIZE; c++) {
+                        if(board[r][c] && board[r][c].color === maxColor) {
+                            createBubbles(r, c, maxColor);
+                            board[r][c] = null;
+                            score += 50;
+                        }
+                    }
+                }
+                setTimeout(createBoard, 300);
+            }
+        }
+
+        function createBubbles(r, c, color) {
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            const rect = cell.getBoundingClientRect();
+            for (let i = 0; i < 8; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.background = 'white';
+                p.style.left = (rect.left + 22) + 'px';
+                p.style.top = (rect.top + 22) + 'px';
+                p.style.setProperty('--dx', (Math.random() - 0.5) * 100 + 'px');
+                p.style.setProperty('--dy', (Math.random() - 0.5) * 100 + 'px');
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 800);
+            }
+        }
+
+        // --- ドラッグ & システム系（Block Blastの仕組みを流用） ---
+        function addDragListeners(el, shape, color, index) {
             const start = (e) => {
                 e.preventDefault();
                 const touch = e.touches ? e.touches[0] : e;
@@ -249,22 +257,19 @@
 
                 const move = (ev) => {
                     const t = ev.touches ? ev.touches[0] : ev;
-                    const displayX = t.clientX - offsetX;
-                    const displayY = t.clientY - offsetY;
-                    clone.style.left = displayX + 'px';
-                    clone.style.top = displayY + 'px';
-                    updatePreview(displayX, displayY - 60, shape);
+                    clone.style.left = (t.clientX - offsetX) + 'px';
+                    clone.style.top = (t.clientY - offsetY) + 'px';
+                    updatePreview(t.clientX - offsetX, t.clientY - offsetY - 40, shape);
                 };
 
                 const end = (ev) => {
                     const t = ev.changedTouches ? ev.changedTouches[0] : ev;
-                    const pos = getBoardPos(t.clientX - offsetX, t.clientY - offsetY - 60);
+                    const pos = getBoardPos(t.clientX - offsetX, t.clientY - offsetY - 40);
                     if (pos && canPlace(shape, pos.r, pos.c)) {
-                        placePiece(shape, pos.r, pos.c, colorId);
+                        placePiece(shape, pos.r, pos.c, color);
                         currentPieces[index] = null;
                         clone.remove();
                         if (currentPieces.every(p => p === null)) spawnPieces();
-                        else checkGameOver();
                     } else {
                         el.style.visibility = 'visible';
                         clone.remove();
@@ -293,6 +298,17 @@
             return null;
         }
 
+        function canPlace(shape, r, c) {
+            for (let i = 0; i < shape.length; i++) {
+                for (let j = 0; j < shape[i].length; j++) {
+                    if (shape[i][j]) {
+                        if (r + i >= BOARD_SIZE || c + j >= BOARD_SIZE || board[r + i][c + j]) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
         function updatePreview(x, y, shape) {
             clearPreview();
             const pos = getBoardPos(x, y);
@@ -312,46 +328,6 @@
             document.querySelectorAll('.cell').forEach(c => c.classList.remove('preview'));
         }
 
-        function canPlace(shape, r, c) {
-            for (let i = 0; i < shape.length; i++) {
-                for (let j = 0; j < shape[i].length; j++) {
-                    if (shape[i][j]) {
-                        if (r + i >= BOARD_SIZE || c + j >= BOARD_SIZE || board[r + i][c + j] !== 0) return false;
-                    }
-                }
-            }
-            return true;
-        }
-
-        function placePiece(shape, r, c, colorId) {
-            shape.forEach((row, i) => {
-                row.forEach((val, j) => {
-                    if (val) {
-                        board[r + i][c + j] = colorId;
-                        createParticles(r + i, c + j, `color-${colorId}`);
-                    }
-                });
-            });
-            score += (shape.flat().filter(v => v).length) * 2;
-            checkAndClear();
-            createBoard();
-            updateScore();
-        }
-
-        function checkAndClear() {
-            let fullRows = [];
-            let fullCols = [];
-            for (let r = 0; r < BOARD_SIZE; r++) if (board[r].every(v => v !== 0)) fullRows.push(r);
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                let isFull = true;
-                for (let r = 0; r < BOARD_SIZE; r++) if (board[r][c] === 0) isFull = false;
-                if (isFull) fullCols.push(c);
-            }
-            fullRows.forEach(r => board[r] = Array(BOARD_SIZE).fill(0));
-            fullCols.forEach(c => { for (let r = 0; r < BOARD_SIZE; r++) board[r][c] = 0; });
-            if (fullRows.length > 0 || fullCols.length > 0) score += (fullRows.length + fullCols.length) * 100;
-        }
-
         function checkGameOver() {
             let canMove = false;
             currentPieces.forEach(p => {
@@ -368,41 +344,6 @@
 
         function updateScore() { document.getElementById('score').innerText = score; }
 
-        async function saveScore() {
-            const name = document.getElementById('player-name').value || "ななしさん";
-            const saveBtn = document.getElementById('save-btn');
-            saveBtn.disabled = true;
-            saveBtn.innerText = "保存中...";
-            try {
-                await addDoc(collection(db, "rankings"), {
-                    name: name, score: score, timestamp: new Date()
-                });
-                showRanking();
-            } catch (e) {
-                alert("エラー！");
-                saveBtn.disabled = false;
-            }
-        }
-
-        async function showRanking() {
-            document.getElementById('game-over').style.display = 'none';
-            document.getElementById('ranking-screen').style.display = 'block';
-            const list = document.getElementById('ranking-list');
-            list.innerHTML = "読み込み中...";
-            try {
-                const q = query(collection(db, "rankings"), orderBy("score", "desc"), limit(5));
-                const querySnapshot = await getDocs(q);
-                let html = ""; let i = 1;
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    html += `<li><span><span class="rank-num">${i}</span>${data.name}</span><span>${data.score}</span></li>`;
-                    i++;
-                });
-                list.innerHTML = html || "データなし";
-            } catch (e) { list.innerHTML = "エラー"; }
-        }
-
-        document.getElementById('save-btn').onclick = saveScore;
         init();
     </script>
 </body>
