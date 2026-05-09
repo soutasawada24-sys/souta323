@@ -3,100 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Coral Craft Puzzle</title>
+    <title>Real Coral Puzzle</title>
     <style>
         :root { 
-            --sea-deep: #002d5b; --sand: #e3ca9d;
-            --red-coral: #ff4d4d; --blue-coral: #4da6ff; --yellow-coral: #ffd11a; 
-            --accent: #b3ffff; --black-coral: #3d3d3d;
+            --sea-deep: #001b33; --sand: #d2b48c;
+            --red-coral: #ff5e5e; --blue-coral: #3498db; --yellow-coral: #f1c40f; 
+            --black-coral: #2c3e50; --accent: #a0fbff;
         }
         * { box-sizing: border-box; touch-action: none; }
         body { 
             display: flex; flex-direction: column; align-items: center; 
-            background: linear-gradient(to bottom, #001a33 0%, var(--sea-deep) 70%, var(--sand) 100%);
-            color: white; font-family: 'Courier New', Courier, monospace; 
+            background: radial-gradient(circle at center, #004d80 0%, var(--sea-deep) 100%);
+            color: white; font-family: 'Hiragino Kaku Gothic ProN', sans-serif; 
             overflow: hidden; margin: 0; height: 100vh; justify-content: center; user-select: none;
         }
 
-        #score-board { font-size: 32px; margin-bottom: 10px; font-weight: bold; text-shadow: 2px 2px 0px #000; }
+        /* 海底の砂と海草の演出 */
+        body::after {
+            content: ''; position: absolute; bottom: 0; width: 100%; height: 15vh;
+            background: var(--sand); opacity: 0.3; z-index: -2;
+        }
+
+        #score-board { font-size: 36px; margin-bottom: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(160,251,255,0.6); }
         
         #game-board { 
-            display: grid; grid-template-columns: repeat(8, 42px); grid-template-rows: repeat(8, 42px); 
-            gap: 2px; background: rgba(0, 0, 0, 0.5); padding: 6px; border: 4px solid #333;
+            display: grid; grid-template-columns: repeat(8, 44px); grid-template-rows: repeat(8, 44px); 
+            gap: 2px; background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.1);
         }
         
-        .cell { width: 42px; height: 42px; background: rgba(255,255,255,0.05); }
+        .cell { width: 44px; height: 44px; background: rgba(255,255,255,0.03); border-radius: 4px; }
 
-        /* マイクラ風サンゴのデザイン */
+        /* リアルなサンゴのデザイン（柄） */
         .coral {
-            width: 42px; height: 42px;
-            image-rendering: pixelated;
-            border: 3px solid rgba(0,0,0,0.2);
-            position: relative;
-            box-shadow: inset 3px 3px 0px rgba(255,255,255,0.3), inset -3px -3px 0px rgba(0,0,0,0.3);
+            width: 44px; height: 44px; border-radius: 8px;
+            position: relative; overflow: hidden;
+            box-shadow: inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.4);
         }
-        /* 網目模様（テクスチャ）の追加 */
-        .coral::after {
-            content: ''; position: absolute; top:0; left:0; right:0; bottom:0;
+        /* サンゴの模様（ポリプ） */
+        .coral::before {
+            content: ''; position: absolute; width: 100%; height: 100%;
             background-image: 
-                radial-gradient(rgba(0,0,0,0.1) 20%, transparent 20%),
-                radial-gradient(rgba(0,0,0,0.1) 20%, transparent 20%);
-            background-size: 8px 8px; background-position: 0 0, 4px 4px;
+                radial-gradient(circle, rgba(0,0,0,0.15) 15%, transparent 20%),
+                radial-gradient(circle, rgba(255,255,255,0.1) 10%, transparent 15%);
+            background-size: 12px 12px; background-position: 0 0, 6px 6px;
         }
 
-        .color-red { background-color: var(--red-coral); border-color: #b30000; }
-        .color-blue { background-color: var(--blue-coral); border-color: #0059b3; }
-        .color-yellow { background-color: var(--yellow-coral); border-color: #b38f00; }
-        .color-black { background-color: var(--black-coral); border-color: #1a1a1a; }
+        .color-red { background: linear-gradient(135deg, #ff7675, #d63031); }
+        .color-blue { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+        .color-yellow { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); }
+        .color-black { background: radial-gradient(circle, #636e72, #2d3436); border: 1px solid #000; }
 
-        /* 消えるときのエフェクト */
-        .blast { animation: blast-ani 0.3s ease-out forwards; }
+        /* 消去エフェクト */
+        .blast { animation: blast-ani 0.4s ease-out forwards; z-index: 10; }
         @keyframes blast-ani {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.8; }
-            100% { transform: scale(0); opacity: 0; }
+            0% { transform: scale(1) translateY(0); opacity: 1; filter: brightness(1); }
+            100% { transform: scale(1.5) translateY(-20px); opacity: 0; filter: brightness(2); }
         }
 
-        .preview { background: rgba(255,255,255,0.2) !important; outline: 2px solid white; }
+        .preview { background: rgba(160,251,255,0.25) !important; box-shadow: inset 0 0 10px var(--accent); }
 
         #pieces-container { 
-            display: flex; margin-top: 20px; justify-content: space-around; 
-            width: 100%; max-width: 400px; height: 120px; align-items: center;
+            display: flex; margin-top: 30px; justify-content: space-around; 
+            width: 100%; max-width: 420px; height: 130px; align-items: center;
         }
-        .piece { display: grid; gap: 0; cursor: grab; }
+        .piece { display: grid; gap: 1px; cursor: grab; transition: transform 0.2s; }
         .dragging { 
             position: fixed; z-index: 1000; pointer-events: none; 
-            transform: scale(1.0); filter: drop-shadow(0 10px 0px rgba(0,0,0,0.5));
+            transform: scale(1.1); filter: drop-shadow(0 15px 15px rgba(0,0,0,0.7));
         }
-        .p-block { width: 38px; height: 38px; border: 2px solid rgba(0,0,0,0.2); }
+        .p-block { width: 34px; height: 34px; }
 
+        /* モーダル */
         .modal {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #1e1e1e; padding: 25px; border: 4px solid var(--accent); z-index: 2000; width: 300px; text-align: center;
+            background: rgba(0, 15, 30, 0.98); padding: 30px; border-radius: 20px; text-align: center;
+            border: 2px solid var(--accent); z-index: 2000; width: 320px;
         }
-        input { padding: 10px; width: 100%; border: 2px solid #555; background: #000; color: #fff; margin-bottom: 10px; }
-        button { background: var(--accent); border: none; padding: 10px; cursor: pointer; font-weight: bold; width: 100%; color: #000; margin-top: 5px; }
-        #ranking-list { text-align: left; margin: 15px 0; padding: 0; list-style: none; }
-        #ranking-list li { border-bottom: 1px solid #333; padding: 5px 0; display: flex; justify-content: space-between; }
+        input { padding: 12px; width: 100%; border-radius: 8px; border: none; margin-bottom: 10px; text-align: center; }
+        button { background: var(--accent); border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; color: #002d5b; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div id="score-board">SCORE: <span id="score">0</span></div>
+    <div id="score-board">CORAL: <span id="score">0</span></div>
     <div id="game-board"></div>
     <div id="pieces-container"></div>
 
     <div id="game-over" class="modal">
-        <h2 style="color: var(--red-coral);">GAME OVER</h2>
+        <h2 style="color: var(--red-coral);">SEA FULL</h2>
         <p>SCORE: <span id="final-score">0</span></p>
-        <input type="text" id="player-name" placeholder="Enter Name" maxlength="8">
-        <button id="save-btn">RANKING SAVE</button>
-        <button onclick="location.reload()" style="background:#444; color:white;">RETRY</button>
+        <input type="text" id="player-name" placeholder="なまえ" maxlength="10">
+        <button id="save-btn">記録する</button>
+        <button onclick="location.reload()" style="background:#444; color:white;">やりなおす</button>
     </div>
 
     <div id="ranking-screen" class="modal">
         <h2 style="color: var(--accent);">RANKING</h2>
-        <ul id="ranking-list"></ul>
-        <button onclick="location.reload()">BACK</button>
+        <ul id="ranking-list" style="text-align:left; padding:0; list-style:none;"></ul>
+        <button onclick="location.reload()">もういちど</button>
     </div>
 
     <script type="module">
@@ -117,14 +121,12 @@
         const SIZE = 8;
         const board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
         let score = 0;
-        let turnCounter = 0;
+        let turnTotal = 0;
         let currentPieces = [null, null, null];
 
         const COLORS = ['red', 'blue', 'yellow'];
         const SHAPES = [
-            [[1,1],[1,1]], [[1,1,1]], [[1,1,1,1]], [[1,1,1,1,1]],
-            [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]],
-            [[0,1,0],[1,1,1],[0,1,0]], [[1,1],[1,0]], [[1,1],[0,1]]
+            [[1,1],[1,1]], [[1,1,1]], [[1,1,1,1]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[1,1],[1,0]], [[1,1,1,1,1]]
         ];
 
         function init() {
@@ -141,8 +143,7 @@
         }
 
         function spawnPieces() {
-            if (turnCounter > 0 && turnCounter % 3 === 0) addBlackCoral();
-
+            if (turnTotal > 0 && turnTotal % 3 === 0) addBlackCoral();
             const container = document.getElementById('pieces-container');
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
@@ -150,7 +151,7 @@
                 const color = COLORS[Math.floor(Math.random() * COLORS.length)];
                 const pieceEl = document.createElement('div');
                 pieceEl.className = 'piece';
-                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, 40px)`;
+                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, 36px)`;
                 
                 shape.forEach(row => {
                     row.forEach(val => {
@@ -169,9 +170,7 @@
 
         function addBlackCoral() {
             let empties = [];
-            for(let r=0; r<SIZE; r++) {
-                for(let c=0; c<SIZE; c++) if(!board[r][c]) empties.push({r,c});
-            }
+            for(let r=0; r<SIZE; r++) for(let c=0; c<SIZE; c++) if(!board[r][c]) empties.push({r,c});
             if(empties.length > 5) {
                 const p = empties[Math.floor(Math.random() * empties.length)];
                 board[p.r][p.c] = 'black';
@@ -196,21 +195,20 @@
 
                 const move = (ev) => {
                     const t = ev.touches ? ev.touches[0] : ev;
-                    // 指の直下にピースの左上が来るように修正（置きやすさUP）
-                    clone.style.left = (t.clientX - 20) + 'px';
-                    clone.style.top = (t.clientY - 80) + 'px';
-                    updatePreview(t.clientX, t.clientY - 80, shape);
+                    clone.style.left = (t.clientX - (shape[0].length * 18)) + 'px';
+                    clone.style.top = (t.clientY - (shape.length * 18) - 60) + 'px';
+                    updatePreview(t.clientX, t.clientY - 60, shape);
                 };
 
                 const end = (ev) => {
                     const t = ev.changedTouches ? ev.changedTouches[0] : ev;
-                    const pos = getBoardPos(t.clientX, t.clientY - 80);
+                    const pos = getBoardPos(t.clientX, t.clientY - 60, shape);
                     if (pos && canPlace(shape, pos.r, pos.c)) {
                         placePiece(shape, pos.r, pos.c, color);
                         currentPieces[index] = null;
                         clone.remove();
                         if (currentPieces.every(p => p === null)) {
-                            turnCounter++;
+                            turnTotal++;
                             spawnPieces();
                         } else if(!checkAnyMovePossible()) finishGame();
                     } else {
@@ -232,10 +230,13 @@
             el.addEventListener('touchstart', start);
         }
 
-        function getBoardPos(x, y) {
+        // 判定を「最も近いマス」に吸い付くように改善
+        function getBoardPos(x, y, shape) {
             const rect = document.getElementById('game-board').getBoundingClientRect();
-            const c = Math.floor((x - rect.left - 6) / 44);
-            const r = Math.floor((y - rect.top - 6) / 44);
+            const cellFullW = 46; // 44px + 2px gap
+            // 指の位置からボード上の座標を算出（微調整用定数含む）
+            const c = Math.round((x - rect.left - 8 - (shape[0].length * cellFullW)/4) / cellFullW);
+            const r = Math.round((y - rect.top - 8 - (shape.length * cellFullW)/4) / cellFullW);
             return {r, c};
         }
 
@@ -255,7 +256,8 @@
                 row.forEach((val, ci) => {
                     if (val) {
                         board[r + ri][c + ci] = color;
-                        document.getElementById(`cell-${r + ri}-${c + ci}`).className = `cell coral color-${color}`;
+                        const cell = document.getElementById(`cell-${r + ri}-${c + ci}`);
+                        cell.className = `cell coral color-${color}`;
                     }
                 });
             });
@@ -285,9 +287,9 @@
                 toRemove.forEach(pos => {
                     const [r, c] = pos.split(',').map(Number);
                     const cell = document.getElementById(`cell-${r}-${c}`);
-                    cell.classList.add('blast'); // 以前のエフェクトを適用
+                    cell.classList.add('blast');
                     board[r][c] = null;
-                    setTimeout(() => { cell.className = 'cell'; }, 300);
+                    setTimeout(() => { cell.className = 'cell'; cell.classList.remove('blast'); }, 400);
                 });
                 score += toRemove.size * 100;
                 updateScore();
@@ -310,7 +312,7 @@
 
         function updatePreview(x, y, shape) {
             clearPreview();
-            const pos = getBoardPos(x, y);
+            const pos = getBoardPos(x, y, shape);
             if (pos && canPlace(shape, pos.r, pos.c)) {
                 shape.forEach((row, i) => {
                     row.forEach((val, j) => {
@@ -325,7 +327,7 @@
         function checkAnyMovePossible() {
             return currentPieces.some(p => {
                 if(!p) return false;
-                for(let r=0; r<SIZE; r++) for(let c=0; c<SIZE; c++) if(canPlace(p.shape, r, c)) return true;
+                for(let r=-2; r<SIZE; r++) for(let c=-2; c<SIZE; c++) if(canPlace(p.shape, r, c)) return true;
                 return false;
             });
         }
@@ -335,25 +337,25 @@
         }
 
         async function saveScore() {
-            const name = document.getElementById('player-name').value || "NO NAME";
+            const name = document.getElementById('player-name').value || "ななし";
             try {
-                await addDoc(collection(db, "coral_craft_rank"), { name, score, timestamp: new Date() });
+                await addDoc(collection(db, "coral_real_rank"), { name, score, timestamp: new Date() });
                 showRanking();
-            } catch (e) { alert("ERROR"); }
+            } catch (e) { alert("保存エラー"); }
         }
 
         async function showRanking() {
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('ranking-screen').style.display = 'block';
             const list = document.getElementById('ranking-list');
-            list.innerHTML = "Loading...";
-            const q = query(collection(db, "coral_craft_rank"), orderBy("score", "desc"), limit(5));
+            list.innerHTML = "取得中...";
+            const q = query(collection(db, "coral_real_rank"), orderBy("score", "desc"), limit(5));
             const snap = await getDocs(q);
             list.innerHTML = "";
             let rank = 1;
             snap.forEach((doc) => {
                 const d = doc.data();
-                list.innerHTML += `<li><span>${rank}. ${d.name}</span><span>${d.score}</span></li>`;
+                list.innerHTML += `<li style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #333;"><span>${rank}. ${d.name}</span><span>${d.score}</span></li>`;
                 rank++;
             });
         }
