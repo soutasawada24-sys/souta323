@@ -3,104 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Premium Coral Puzzle</title>
+    <title>Coral Craft Puzzle</title>
     <style>
         :root { 
-            --sea-dark: #001529; --sea-mid: #004a7c; --sand: #d2b48c;
-            --red-coral: #ff6b6b; --blue-coral: #4facfe; --yellow-coral: #feca57; 
-            --accent: #7df9ff; --black-coral: #222;
+            --sea-deep: #002d5b; --sand: #e3ca9d;
+            --red-coral: #ff4d4d; --blue-coral: #4da6ff; --yellow-coral: #ffd11a; 
+            --accent: #b3ffff; --black-coral: #3d3d3d;
         }
         * { box-sizing: border-box; touch-action: none; }
         body { 
             display: flex; flex-direction: column; align-items: center; 
-            background: linear-gradient(to bottom, var(--sea-dark) 0%, var(--sea-mid) 70%, var(--sand) 100%);
-            color: white; font-family: 'Segoe UI', sans-serif; 
+            background: linear-gradient(to bottom, #001a33 0%, var(--sea-deep) 70%, var(--sand) 100%);
+            color: white; font-family: 'Courier New', Courier, monospace; 
             overflow: hidden; margin: 0; height: 100vh; justify-content: center; user-select: none;
         }
 
-        /* 背景の海草 */
-        .seaweed {
-            position: absolute; bottom: 0; width: 15px; height: 60px;
-            background: rgba(39, 174, 96, 0.5); border-radius: 100% 100% 0 0;
-            animation: wave 4s ease-in-out infinite alternate; transform-origin: bottom; z-index: -1;
-        }
-        @keyframes wave { from { transform: rotate(-15deg) scaleY(1); } to { transform: rotate(15deg) scaleY(1.2); } }
-
-        #score-board { font-size: 32px; margin-bottom: 10px; font-weight: 900; text-shadow: 0 0 15px var(--accent); }
+        #score-board { font-size: 32px; margin-bottom: 10px; font-weight: bold; text-shadow: 2px 2px 0px #000; }
         
         #game-board { 
             display: grid; grid-template-columns: repeat(8, 42px); grid-template-rows: repeat(8, 42px); 
-            gap: 3px; background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 15px; 
-            border: 4px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px);
+            gap: 2px; background: rgba(0, 0, 0, 0.5); padding: 6px; border: 4px solid #333;
         }
         
-        .cell { width: 42px; height: 42px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .cell { width: 42px; height: 42px; background: rgba(255,255,255,0.05); }
 
-        /* サンゴのデザイン：不規則な形とブツブツ感 */
+        /* マイクラ風サンゴのデザイン */
         .coral {
-            width: 40px; height: 40px; border-radius: 12px 6px 14px 8px;
-            box-shadow: inset -4px -4px 6px rgba(0,0,0,0.4), 2px 2px 5px rgba(0,0,0,0.3);
-            background-image: radial-gradient(circle, rgba(255,255,255,0.3) 10%, transparent 20%);
-            background-size: 15px 15px;
+            width: 42px; height: 42px;
+            image-rendering: pixelated;
+            border: 3px solid rgba(0,0,0,0.2);
             position: relative;
+            box-shadow: inset 3px 3px 0px rgba(255,255,255,0.3), inset -3px -3px 0px rgba(0,0,0,0.3);
         }
-        .color-red { background-color: var(--red-coral); }
-        .color-blue { background-color: var(--blue-coral); }
-        .color-yellow { background-color: var(--yellow-coral); }
-        
-        /* 黒いサンゴ（お邪魔） */
-        .color-black { 
-            background-color: var(--black-coral); border: 2px solid #000; border-radius: 5px;
-            background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.05) 5px, rgba(255,255,255,0.05) 10px);
+        /* 網目模様（テクスチャ）の追加 */
+        .coral::after {
+            content: ''; position: absolute; top:0; left:0; right:0; bottom:0;
+            background-image: 
+                radial-gradient(rgba(0,0,0,0.1) 20%, transparent 20%),
+                radial-gradient(rgba(0,0,0,0.1) 20%, transparent 20%);
+            background-size: 8px 8px; background-position: 0 0, 4px 4px;
         }
 
-        .preview { background: rgba(255,255,255,0.4) !important; border-radius: 8px; }
+        .color-red { background-color: var(--red-coral); border-color: #b30000; }
+        .color-blue { background-color: var(--blue-coral); border-color: #0059b3; }
+        .color-yellow { background-color: var(--yellow-coral); border-color: #b38f00; }
+        .color-black { background-color: var(--black-coral); border-color: #1a1a1a; }
+
+        /* 消えるときのエフェクト */
+        .blast { animation: blast-ani 0.3s ease-out forwards; }
+        @keyframes blast-ani {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .preview { background: rgba(255,255,255,0.2) !important; outline: 2px solid white; }
 
         #pieces-container { 
-            display: flex; margin-top: 30px; justify-content: space-around; 
+            display: flex; margin-top: 20px; justify-content: space-around; 
             width: 100%; max-width: 400px; height: 120px; align-items: center;
         }
-        .piece { display: grid; gap: 2px; cursor: grab; }
+        .piece { display: grid; gap: 0; cursor: grab; }
         .dragging { 
             position: fixed; z-index: 1000; pointer-events: none; 
-            transform: scale(1.1); filter: drop-shadow(0 10px 20px rgba(0,0,0,0.6));
+            transform: scale(1.0); filter: drop-shadow(0 10px 0px rgba(0,0,0,0.5));
         }
-        .p-block { width: 36px; height: 36px; }
+        .p-block { width: 38px; height: 38px; border: 2px solid rgba(0,0,0,0.2); }
 
-        /* モーダル表示 */
         .modal {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0, 20, 40, 0.95); padding: 30px; border-radius: 25px; text-align: center;
-            border: 3px solid var(--accent); z-index: 2000; width: 85%; max-width: 340px;
+            background: #1e1e1e; padding: 25px; border: 4px solid var(--accent); z-index: 2000; width: 300px; text-align: center;
         }
-        input { padding: 12px; width: 100%; border-radius: 10px; border: none; margin-bottom: 15px; text-align: center; font-size: 16px; }
-        button { background: var(--accent); border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; color: #001a33; font-size: 16px; margin-top: 10px; }
-        #ranking-list { text-align: left; margin: 15px 0; list-style: none; padding: 0; }
-        #ranking-list li { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; }
+        input { padding: 10px; width: 100%; border: 2px solid #555; background: #000; color: #fff; margin-bottom: 10px; }
+        button { background: var(--accent); border: none; padding: 10px; cursor: pointer; font-weight: bold; width: 100%; color: #000; margin-top: 5px; }
+        #ranking-list { text-align: left; margin: 15px 0; padding: 0; list-style: none; }
+        #ranking-list li { border-bottom: 1px solid #333; padding: 5px 0; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
-    <div id="score-board">CORAL: <span id="score">0</span></div>
+    <div id="score-board">SCORE: <span id="score">0</span></div>
     <div id="game-board"></div>
     <div id="pieces-container"></div>
 
-    <!-- 海の装飾 -->
-    <div class="seaweed" style="left: 10%; height: 80px;"></div>
-    <div class="seaweed" style="left: 20%; height: 50px; animation-delay: 1s;"></div>
-    <div class="seaweed" style="right: 15%; height: 90px; animation-delay: 0.5s;"></div>
-
     <div id="game-over" class="modal">
-        <h2 style="color: var(--red-coral); margin-top:0;">GAME OVER</h2>
-        <p>スコア: <span id="final-score" style="font-size: 28px; font-weight:bold;">0</span></p>
-        <input type="text" id="player-name" placeholder="なまえを教えてね">
-        <button id="save-btn">ランキングに登録</button>
-        <button onclick="location.reload()" style="background:#444; color:white;">もう一度</button>
+        <h2 style="color: var(--red-coral);">GAME OVER</h2>
+        <p>SCORE: <span id="final-score">0</span></p>
+        <input type="text" id="player-name" placeholder="Enter Name" maxlength="8">
+        <button id="save-btn">RANKING SAVE</button>
+        <button onclick="location.reload()" style="background:#444; color:white;">RETRY</button>
     </div>
 
     <div id="ranking-screen" class="modal">
-        <h2 style="color: var(--accent); margin-top:0;">SEA KINGS</h2>
+        <h2 style="color: var(--accent);">RANKING</h2>
         <ul id="ranking-list"></ul>
-        <button onclick="location.reload()">閉じる</button>
+        <button onclick="location.reload()">BACK</button>
     </div>
 
     <script type="module">
@@ -126,9 +122,9 @@
 
         const COLORS = ['red', 'blue', 'yellow'];
         const SHAPES = [
-            [[1,1],[1,1]], [[1,1,1]], [[1,1,1,1]], 
-            [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], 
-            [[0,1,0],[1,1,1],[0,1,0]], [[1,1,1,1,1]]
+            [[1,1],[1,1]], [[1,1,1]], [[1,1,1,1]], [[1,1,1,1,1]],
+            [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]],
+            [[0,1,0],[1,1,1],[0,1,0]], [[1,1],[1,0]], [[1,1],[0,1]]
         ];
 
         function init() {
@@ -200,14 +196,15 @@
 
                 const move = (ev) => {
                     const t = ev.touches ? ev.touches[0] : ev;
-                    clone.style.left = (t.clientX - (shape[0].length * 20)) + 'px';
-                    clone.style.top = (t.clientY - (shape.length * 20) - 80) + 'px';
+                    // 指の直下にピースの左上が来るように修正（置きやすさUP）
+                    clone.style.left = (t.clientX - 20) + 'px';
+                    clone.style.top = (t.clientY - 80) + 'px';
                     updatePreview(t.clientX, t.clientY - 80, shape);
                 };
 
                 const end = (ev) => {
                     const t = ev.changedTouches ? ev.changedTouches[0] : ev;
-                    const pos = getBoardPos(t.clientX, t.clientY - 80, shape);
+                    const pos = getBoardPos(t.clientX, t.clientY - 80);
                     if (pos && canPlace(shape, pos.r, pos.c)) {
                         placePiece(shape, pos.r, pos.c, color);
                         currentPieces[index] = null;
@@ -235,11 +232,10 @@
             el.addEventListener('touchstart', start);
         }
 
-        function getBoardPos(x, y, shape) {
+        function getBoardPos(x, y) {
             const rect = document.getElementById('game-board').getBoundingClientRect();
-            const cellW = 45; 
-            const c = Math.floor((x - rect.left - (shape[0].length * cellW)/4) / cellW);
-            const r = Math.floor((y - rect.top - (shape.length * cellW)/4) / cellW);
+            const c = Math.floor((x - rect.left - 6) / 44);
+            const r = Math.floor((y - rect.top - 6) / 44);
             return {r, c};
         }
 
@@ -289,8 +285,9 @@
                 toRemove.forEach(pos => {
                     const [r, c] = pos.split(',').map(Number);
                     const cell = document.getElementById(`cell-${r}-${c}`);
+                    cell.classList.add('blast'); // 以前のエフェクトを適用
                     board[r][c] = null;
-                    setTimeout(() => { cell.className = 'cell'; }, 200);
+                    setTimeout(() => { cell.className = 'cell'; }, 300);
                 });
                 score += toRemove.size * 100;
                 updateScore();
@@ -313,7 +310,7 @@
 
         function updatePreview(x, y, shape) {
             clearPreview();
-            const pos = getBoardPos(x, y, shape);
+            const pos = getBoardPos(x, y);
             if (pos && canPlace(shape, pos.r, pos.c)) {
                 shape.forEach((row, i) => {
                     row.forEach((val, j) => {
@@ -328,7 +325,7 @@
         function checkAnyMovePossible() {
             return currentPieces.some(p => {
                 if(!p) return false;
-                for(let r=-2; r<SIZE; r++) for(let c=-2; c<SIZE; c++) if(canPlace(p.shape, r, c)) return true;
+                for(let r=0; r<SIZE; r++) for(let c=0; c<SIZE; c++) if(canPlace(p.shape, r, c)) return true;
                 return false;
             });
         }
@@ -338,19 +335,19 @@
         }
 
         async function saveScore() {
-            const name = document.getElementById('player-name').value || "ななし";
+            const name = document.getElementById('player-name').value || "NO NAME";
             try {
-                await addDoc(collection(db, "coral_ranking"), { name, score, timestamp: new Date() });
+                await addDoc(collection(db, "coral_craft_rank"), { name, score, timestamp: new Date() });
                 showRanking();
-            } catch (e) { alert("保存エラー"); }
+            } catch (e) { alert("ERROR"); }
         }
 
         async function showRanking() {
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('ranking-screen').style.display = 'block';
             const list = document.getElementById('ranking-list');
-            list.innerHTML = "取得中...";
-            const q = query(collection(db, "coral_ranking"), orderBy("score", "desc"), limit(5));
+            list.innerHTML = "Loading...";
+            const q = query(collection(db, "coral_craft_rank"), orderBy("score", "desc"), limit(5));
             const snap = await getDocs(q);
             list.innerHTML = "";
             let rank = 1;
