@@ -3,73 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Coral Puzzle - Pixel Perfect</title>
+    <title>Realistic Coral Puzzle</title>
     <style>
         :root { 
-            --sea-dark: #001a33; --sea-mid: #004d80; --sand: #c2b280;
+            --sea-bg: #002b4d; --sand-bg: #c2b280;
             --red-coral: #ff6b6b; --blue-coral: #4facfe; --yellow-coral: #feca57; 
-            --accent: #7df9ff; --black-coral: #2d3436;
+            --accent: #7df9ff; --black-coral: #333;
         }
         * { box-sizing: border-box; touch-action: none; }
         body { 
             display: flex; flex-direction: column; align-items: center; 
-            background: linear-gradient(to bottom, var(--sea-dark) 0%, var(--sea-mid) 70%, var(--sand) 100%);
-            color: white; font-family: sans-serif; 
+            background: linear-gradient(to bottom, #001529 0%, var(--sea-bg) 70%, var(--sand-bg) 100%);
+            color: white; font-family: 'Helvetica', sans-serif; 
             overflow: hidden; margin: 0; height: 100vh; justify-content: center; user-select: none;
         }
 
+        /* 背景のゆらゆら海草 */
         .seaweed {
-            position: absolute; bottom: 0; width: 18px; height: 70px;
-            background: rgba(46, 204, 113, 0.6); border-radius: 50% 50% 0 0;
-            animation: wave 3s ease-in-out infinite alternate;
-            transform-origin: bottom; z-index: -1;
+            position: absolute; bottom: 0; width: 16px; height: 80px;
+            background: rgba(39, 174, 96, 0.5); border-radius: 50% 50% 0 0;
+            animation: wave 4s ease-in-out infinite alternate; transform-origin: bottom; z-index: -1;
         }
-        @keyframes wave { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+        @keyframes wave { from { transform: rotate(-15deg); } to { transform: rotate(15deg); } }
 
-        #score-board { font-size: 30px; margin-bottom: 10px; font-weight: bold; }
+        #score-board { font-size: 32px; margin-bottom: 10px; font-weight: bold; text-shadow: 0 0 10px var(--accent); }
         
         #game-board { 
-            display: grid; grid-template-columns: repeat(8, 42px); grid-template-rows: repeat(8, 42px); 
-            gap: 2px; background: rgba(0, 0, 0, 0.5); padding: 8px; border-radius: 8px; 
-            border: 3px solid rgba(255, 255, 255, 0.2);
-            position: relative;
+            display: grid; grid-template-columns: repeat(8, 44px); grid-template-rows: repeat(8, 44px); 
+            gap: 2px; background: rgba(0, 0, 0, 0.5); padding: 8px; border-radius: 10px; border: 4px solid #222;
         }
         
-        .cell { width: 42px; height: 42px; background: rgba(255,255,255,0.05); border-radius: 4px; }
+        .cell { width: 44px; height: 44px; background: rgba(255,255,255,0.05); border-radius: 4px; }
 
+        /* --- 決定版：リアルなサンゴ柄 --- */
         .coral {
-            width: 42px; height: 42px; border-radius: 8px;
-            box-shadow: inset 3px 3px 6px rgba(255,255,255,0.3), inset -3px -3px 6px rgba(0,0,0,0.3);
-            background-image: radial-gradient(rgba(0,0,0,0.1) 15%, transparent 20%);
-            background-size: 10px 10px; position: relative;
+            width: 44px; height: 44px; border-radius: 6px;
+            position: relative;
+            /* 基本のドット絵的な影 */
+            box-shadow: inset 4px 4px 0 rgba(255,255,255,0.3), inset -4px -4px 0 rgba(0,0,0,0.3);
+            image-rendering: pixelated; /* ドット感を出す */
         }
+        /* サンゴの穴（ポリプ）をグラデーションで表現 */
+        .coral::after {
+            content: ''; position: absolute; top:0; left:0; width:100%; height:100%;
+            background-image: 
+                radial-gradient(rgba(0,0,0,0.2) 15%, transparent 20%),
+                radial-gradient(rgba(255,255,255,0.1) 10%, transparent 15%);
+            background-size: 11px 11px; background-position: 2px 2px, 6px 6px;
+            border-radius: 6px;
+        }
+
         .color-red { background-color: var(--red-coral); }
         .color-blue { background-color: var(--blue-coral); }
         .color-yellow { background-color: var(--yellow-coral); }
         .color-black { background-color: var(--black-coral); border: 2px solid #000; }
 
-        .blast { animation: blast-ani 0.3s ease-out forwards; }
-        @keyframes blast-ani { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+        .blast { animation: blast-ani 0.4s forwards; }
+        @keyframes blast-ani { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; filter: brightness(2); } }
 
-        .preview { background: rgba(255,255,255,0.3) !important; outline: 2px solid var(--accent); }
+        .preview { background: rgba(125, 249, 255, 0.3) !important; outline: 2px solid var(--accent); }
 
         #pieces-container { 
-            display: flex; margin-top: 20px; justify-content: space-around; 
-            width: 100%; max-width: 420px; height: 130px; align-items: center;
+            display: flex; margin-top: 25px; justify-content: space-around; 
+            width: 100%; max-width: 400px; height: 120px; align-items: center;
         }
         .piece { display: grid; gap: 2px; cursor: grab; }
         .dragging { 
             position: fixed; z-index: 1000; pointer-events: none; 
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.6));
+            transform: scale(1.0); filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
         }
-        .p-block { width: 42px; height: 42px; }
+        .p-block { width: 44px; height: 44px; }
 
+        /* モーダル */
         .modal {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0, 20, 40, 0.98); padding: 25px; border-radius: 20px; text-align: center;
-            border: 2px solid var(--accent); z-index: 2000; width: 300px;
+            background: rgba(0, 20, 40, 0.95); padding: 30px; border-radius: 20px; text-align: center;
+            border: 3px solid var(--accent); z-index: 2000; width: 320px;
         }
-        button { background: var(--accent); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; color: #001a33; margin-top: 8px; }
+        button { background: var(--accent); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; color: #001a33; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -77,27 +88,23 @@
     <div id="game-board"></div>
     <div id="pieces-container"></div>
 
-    <div class="seaweed" style="left: 15%; height: 80px;"></div>
-    <div class="seaweed" style="right: 15%; height: 60px; animation-delay: 0.5s;"></div>
+    <div class="seaweed" style="left: 10%; height: 70px;"></div>
+    <div class="seaweed" style="left: 20%; height: 50px; animation-delay: 1s;"></div>
+    <div class="seaweed" style="right: 15%; height: 90px; animation-delay: 0.5s;"></div>
 
     <div id="game-over" class="modal">
         <h2 style="color: var(--red-coral);">GAME OVER</h2>
         <p>SCORE: <span id="final-score">0</span></p>
-        <input type="text" id="player-name" placeholder="Name" style="padding:10px; width:100%; margin-bottom:10px;">
-        <button id="save-btn">SAVE & RANKING</button>
-        <button onclick="location.reload()" style="background:#555; color:white;">RETRY</button>
-    </div>
-
-    <div id="ranking-screen" class="modal">
-        <h2 style="color: var(--accent);">RANKING</h2>
-        <ul id="ranking-list" style="text-align:left; padding:0; list-style:none;"></ul>
-        <button onclick="location.reload()">CLOSE</button>
+        <input type="text" id="player-name" placeholder="なまえ" style="padding:10px; width:100%; margin-bottom:10px;">
+        <button id="save-btn">ランキング保存</button>
+        <button onclick="location.reload()" style="background:#444; color:white;">もう一度</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+        // Firebase設定（既存）
         const firebaseConfig = {
             apiKey: "AIzaSyA4J_zWBM5eI8WtpU8mSk9LY5nZiOjj1BA",
             authDomain: "my-block-blast-ad0ec.firebaseapp.com",
@@ -112,11 +119,9 @@
         const SIZE = 8;
         const board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
         let score = 0;
-        let turnCounter = 0;
-        let currentPieces = [null, null, null];
-
         const COLORS = ['red', 'blue', 'yellow'];
-        const SHAPES = [[[1,1],[1,1]], [[1,1,1]], [[1,1,1,1]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[1,1],[1,0]]];
+        const SHAPES = [[[1,1],[1,1]], [[1,1,1]], [[1,1,1,1]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]]];
+        let currentPieces = [null, null, null];
 
         function init() {
             const boardEl = document.getElementById('game-board');
@@ -132,7 +137,6 @@
         }
 
         function spawnPieces() {
-            if (turnCounter > 0 && turnCounter % 3 === 0) addBlackCoral();
             const container = document.getElementById('pieces-container');
             container.innerHTML = '';
             for (let i = 0; i < 3; i++) {
@@ -140,7 +144,7 @@
                 const color = COLORS[Math.floor(Math.random() * COLORS.length)];
                 const pieceEl = document.createElement('div');
                 pieceEl.className = 'piece';
-                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, 42px)`;
+                pieceEl.style.gridTemplateColumns = `repeat(${shape[0].length}, 44px)`;
                 shape.forEach(row => row.forEach(val => {
                     const b = document.createElement('div');
                     b.className = val ? `p-block coral color-${color}` : '';
@@ -150,27 +154,14 @@
                 container.appendChild(pieceEl);
                 currentPieces[i] = { shape, color };
             }
-            if(!checkAnyMovePossible()) finishGame();
-        }
-
-        function addBlackCoral() {
-            let empties = [];
-            for(let r=0; r<SIZE; r++) for(let c=0; c<SIZE; c++) if(!board[r][c]) empties.push({r,c});
-            if(empties.length > 0) {
-                const p = empties[Math.floor(Math.random() * empties.length)];
-                board[p.r][p.c] = 'black';
-                document.getElementById(`cell-${p.r}-${p.c}`).className = 'cell coral color-black';
-            }
         }
 
         function addDragListeners(el, shape, color, index) {
             const start = (e) => {
                 const touch = e.touches ? e.touches[0] : e;
                 const rect = el.getBoundingClientRect();
-                
-                // 【重要】指の位置とブロックの左上端の距離を固定
                 const offsetX = touch.clientX - rect.left;
-                const offsetY = touch.clientY - rect.top + 80; // 指の上に表示
+                const offsetY = touch.clientY - rect.top + 80;
 
                 const clone = el.cloneNode(true);
                 clone.classList.add('dragging');
@@ -179,28 +170,23 @@
 
                 const move = (ev) => {
                     const t = ev.touches ? ev.touches[0] : ev;
-                    const blockLeft = t.clientX - offsetX;
-                    const blockTop = t.clientY - offsetY;
-                    
-                    clone.style.left = blockLeft + 'px';
-                    clone.style.top = blockTop + 'px';
-
-                    // ブロックの左上端の位置を基準に判定
-                    updatePreview(blockLeft, blockTop, shape);
+                    const x = t.clientX - offsetX;
+                    const y = t.clientY - offsetY;
+                    clone.style.left = x + 'px';
+                    clone.style.top = y + 'px';
+                    updatePreview(x, y, shape);
                 };
 
                 const end = (ev) => {
                     const t = ev.changedTouches ? ev.changedTouches[0] : ev;
-                    const blockLeft = t.clientX - offsetX;
-                    const blockTop = t.clientY - offsetY;
-                    
-                    const pos = getBoardPos(blockLeft, blockTop);
+                    const x = t.clientX - offsetX;
+                    const y = t.clientY - offsetY;
+                    const pos = getBoardPos(x, y);
                     if (pos && canPlace(shape, pos.r, pos.c)) {
                         placePiece(shape, pos.r, pos.c, color);
                         currentPieces[index] = null;
                         clone.remove();
-                        if (currentPieces.every(p => p === null)) { turnCounter++; spawnPieces(); }
-                        else if(!checkAnyMovePossible()) finishGame();
+                        if (currentPieces.every(p => p === null)) spawnPieces();
                     } else {
                         el.style.visibility = 'visible';
                         clone.remove();
@@ -220,11 +206,10 @@
             el.addEventListener('touchstart', start);
         }
 
-        function getBoardPos(blockLeft, blockTop) {
+        function getBoardPos(x, y) {
             const boardRect = document.getElementById('game-board').getBoundingClientRect();
-            // ボードの左上（padding込）を基準に、ブロックの左上がどのマスにいるか算出
-            const c = Math.round((blockLeft - boardRect.left - 8) / 44);
-            const r = Math.round((blockTop - boardRect.top - 8) / 44);
+            const c = Math.round((x - boardRect.left - 8) / 46);
+            const r = Math.round((y - boardRect.top - 8) / 46);
             return {r, c};
         }
 
@@ -248,7 +233,7 @@
             }));
             score += 10;
             checkConnections();
-            updateScore();
+            document.getElementById('score').innerText = score;
         }
 
         function checkConnections() {
@@ -265,17 +250,14 @@
                     if(cluster.some(p => p.c === SIZE-1)) cluster.forEach(p => toRemove.add(`${p.r},${p.c}`));
                 }
             });
-            if (toRemove.size > 0) {
-                toRemove.forEach(pos => {
-                    const [r, c] = pos.split(',').map(Number);
-                    const cell = document.getElementById(`cell-${r}-${c}`);
-                    cell.classList.add('blast');
-                    board[r][c] = null;
-                    setTimeout(() => { cell.className = 'cell'; cell.classList.remove('blast'); }, 300);
-                });
-                score += toRemove.size * 100;
-                updateScore();
-            }
+            toRemove.forEach(pos => {
+                const [r, c] = pos.split(',').map(Number);
+                const cell = document.getElementById(`cell-${r}-${c}`);
+                cell.classList.add('blast');
+                board[r][c] = null;
+                setTimeout(() => { cell.className = 'cell'; cell.classList.remove('blast'); }, 400);
+            });
+            if(toRemove.size > 0) score += toRemove.size * 50;
         }
 
         function bfs(r, c, color, visited, cluster) {
@@ -292,9 +274,9 @@
             }
         }
 
-        function updatePreview(left, top, shape) {
+        function updatePreview(x, y, shape) {
             clearPreview();
-            const pos = getBoardPos(left, top);
+            const pos = getBoardPos(x, y);
             if (pos && canPlace(shape, pos.r, pos.c)) {
                 shape.forEach((row, i) => row.forEach((val, j) => {
                     if (val) document.getElementById(`cell-${pos.r + i}-${pos.c + j}`)?.classList.add('preview');
@@ -303,39 +285,7 @@
         }
 
         function clearPreview() { document.querySelectorAll('.cell').forEach(c => c.classList.remove('preview')); }
-        function updateScore() { document.getElementById('score').innerText = score; }
-        function checkAnyMovePossible() {
-            return currentPieces.some(p => {
-                if(!p) return false;
-                for(let r=0; r<SIZE; r++) for(let c=0; c<SIZE; c++) if(canPlace(p.shape, r, c)) return true;
-                return false;
-            });
-        }
-        function finishGame() { document.getElementById('game-over').style.display = 'block'; document.getElementById('final-score').innerText = score; }
 
-        async function saveScore() {
-            const name = document.getElementById('player-name').value || "ANON";
-            await addDoc(collection(db, "coral_pixel_rank"), { name, score, timestamp: new Date() });
-            showRanking();
-        }
-
-        async function showRanking() {
-            document.getElementById('game-over').style.display = 'none';
-            document.getElementById('ranking-screen').style.display = 'block';
-            const list = document.getElementById('ranking-list');
-            list.innerHTML = "Loading...";
-            const q = query(collection(db, "coral_pixel_rank"), orderBy("score", "desc"), limit(5));
-            const snap = await getDocs(q);
-            list.innerHTML = "";
-            let rank = 1;
-            snap.forEach((doc) => {
-                const d = doc.data();
-                list.innerHTML += `<li style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${rank}. ${d.name}</span><span>${d.score}</span></li>`;
-                rank++;
-            });
-        }
-
-        document.getElementById('save-btn').onclick = saveScore;
         init();
     </script>
 </body>
